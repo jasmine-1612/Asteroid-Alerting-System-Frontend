@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ORBITAL_UI | Asteroid Alerting & Notification System</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "surface-container": "#1d2026", "outline": "#909095",
+          "tertiary-container": "#1b0900", "tertiary": "#ffb77d",
+          "surface-container-high": "#272a31", "tertiary-fixed-dim": "#ffb77d",
+          "inverse-on-surface": "#2e3037", "primary": "#dcb8ff",
+          "surface-tint": "#dcb8ff", "on-background": "#e1e2eb",
+          "inverse-primary": "#8422dc", "surface-dim": "#10131a",
+          "primary-fixed-dim": "#dcb8ff", "primary-container": "#190032",
+          "on-tertiary-fixed-variant": "#6e3900", "surface-container-low": "#191c22",
+          "on-secondary-fixed": "#151c26", "primary-fixed": "#efdbff",
+          "error-container": "#93000a", "surface-bright": "#363940",
+          "on-tertiary-container": "#ba6500", "on-surface": "#e1e2eb",
+          "secondary-fixed-dim": "#c0c7d4", "on-surface-variant": "#c6c6cb",
+          "on-error-container": "#ffdad6", "background": "#10131a",
+          "on-secondary": "#2a313b", "secondary": "#c0c7d4",
+          "surface-variant": "#32353c", "outline-variant": "#45474b",
+          "on-error": "#690005", "on-primary-container": "#a34bfc",
+          "surface-container-highest": "#32353c", "secondary-container": "#454c57",
+          "on-secondary-container": "#b5bcc9", "on-tertiary": "#4d2600",
+          "on-primary-fixed": "#2c0051", "error": "#ffb4ab",
+          "tertiary-fixed": "#ffdcc3", "secondary-fixed": "#dce3f1",
+          "inverse-surface": "#e1e2eb", "on-tertiary-fixed": "#2f1500",
+          "on-primary": "#480081", "on-primary-fixed-variant": "#6700b5",
+          "surface": "#10131a", "surface-container-lowest": "#0b0e14",
+          "on-secondary-fixed-variant": "#404752"
+        },
+        fontFamily: { "headline": ["Space Grotesk"], "body": ["Inter"], "label": ["Space Grotesk"] },
+        borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+      },
+    },
+  }
+</script>
+<style>
+  body { background-color: #0b0e14; color: #e1e2eb; font-family: 'Inter', sans-serif; }
+  .hud-grid { background-image: radial-gradient(rgba(144,144,149,0.05) 1px, transparent 1px); background-size: 24px 24px; }
+  .glow-nebula { box-shadow: 0 0 40px -10px rgba(220,184,255,0.2); }
+  .status-pulse { position: relative; }
+  .status-pulse::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 50%; background: currentColor; opacity: 0.4;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0% { transform: scale(1); opacity: 0.4; } 100% { transform: scale(2.5); opacity: 0; } }
+  @keyframes radar-sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .radar-sweep {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 270deg, rgba(220,184,255,0.15) 360deg);
+    animation: radar-sweep 4s linear infinite;
+  }
+  @keyframes kafka-bar { 0% { width: 55%; } 50% { width: 82%; } 100% { width: 55%; } }
+  .kafka-bar { animation: kafka-bar 3s ease-in-out infinite; }
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0b0e14; }
+  ::-webkit-scrollbar-thumb { background: #32353c; border-radius: 3px; }
+
+  /* Deploy node toast */
+  #deploy-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #1d2026; border: 1px solid rgba(220,184,255,0.2);
+    padding: 12px 24px; border-radius: 8px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: #dcb8ff; z-index: 999;
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s;
+    opacity: 0; pointer-events: none; white-space: nowrap;
+  }
+  #deploy-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+</style>
+</head>
+<body class="hud-grid selection:bg-primary/30">
+
+<!-- TOP NAV -->
+<nav class="fixed top-0 w-full z-50 bg-[#10131a]/80 backdrop-blur-xl border-b border-[#32353c]/30 shadow-[0_8px_32px_0_rgba(0,0,0,0.36)]">
+  <div class="flex items-center justify-between px-8 h-16 w-full max-w-screen-2xl mx-auto">
+    <div class="flex items-center gap-8">
+      <span class="text-xl font-bold tracking-tighter text-[#dcb8ff] font-['Space_Grotesk']">ORBITAL_UI</span>
+      <div class="hidden md:flex gap-6 font-['Space_Grotesk'] tracking-tight text-sm font-medium">
+        <a href="architecture.html" class="text-[#e1e2eb]/60 hover:text-[#e1e2eb] transition-colors cursor-pointer">Architecture</a>
+        <a href="http://127.0.0.1:5501/Doc.html" class="text-[#e1e2eb]/60 hover:text-[#e1e2eb] transition-colors cursor-pointer">Docs</a>
+        <a href="https://github.com" target="_blank" class="text-[#e1e2eb]/60 hover:text-[#e1e2eb] transition-colors cursor-pointer">GitHub</a>
+      </div>
+    </div>
+    <a href="dashboard.html" class="bg-primary text-on-primary px-5 py-2 rounded-lg font-['Space_Grotesk'] font-bold text-sm tracking-tight active:scale-95 transition-all hover:brightness-110 shadow-lg shadow-primary/10 inline-block">
+      Launch Dashboard
+    </a>
+  </div>
+</nav>
+
+<main class="pt-32 pb-24 px-8 max-w-7xl mx-auto">
+
+  <!-- HERO -->
+  <section class="relative mb-32 flex flex-col md:flex-row items-center gap-12">
+    <div class="flex-1 space-y-8">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container-highest border border-outline-variant/30 text-[10px] uppercase tracking-[0.2em] font-['Space_Grotesk'] text-primary">
+        <span class="w-2 h-2 rounded-full bg-primary status-pulse"></span>
+        Live Telemetry Active
+      </div>
+      <h1 class="text-6xl md:text-8xl font-['Space_Grotesk'] font-bold leading-[0.9] tracking-tighter text-on-background">
+        Monitoring the <span class="text-primary italic">Horizon</span>.
+      </h1>
+      <p class="max-w-xl text-lg text-on-surface-variant font-body leading-relaxed">
+        An event-driven backend system tracking Near-Earth Objects via NASA's API, powered by Spring Boot, Kafka, and Docker.
+      </p>
+      <div class="flex flex-wrap gap-4">
+        <a href="dashboard.html" class="px-8 py-4 bg-primary text-on-primary font-['Space_Grotesk'] font-bold rounded-lg transition-transform active:scale-95 glow-nebula hover:brightness-110 flex items-center gap-2 inline-block">
+          Launch Dashboard <span class="material-symbols-outlined text-lg" style="font-variation-settings:'FILL' 0">arrow_forward</span>
+        </a>
+        <a href="architecture.html" class="px-8 py-4 border border-outline-variant/30 text-on-surface font-['Space_Grotesk'] font-medium rounded-lg hover:bg-surface-container transition-colors inline-block">
+          View Architecture
+        </a>
+      </div>
+    </div>
+
+    <!-- RADAR -->
+    <div class="flex-1 w-full max-w-lg aspect-square relative">
+      <div class="absolute inset-0 bg-primary/10 blur-[100px] rounded-full pointer-events-none"></div>
+      <div class="relative w-full h-full border border-outline-variant/20 rounded-xl overflow-hidden bg-surface-container-low/50 backdrop-blur-sm p-6 flex items-center justify-center">
+        <div class="w-full h-full border border-outline-variant/10 rounded-full flex items-center justify-center relative overflow-hidden">
+          <div class="radar-sweep pointer-events-none"></div>
+          <div class="w-3/4 h-3/4 border border-outline-variant/20 rounded-full flex items-center justify-center">
+            <div class="w-1/2 h-1/2 border border-outline-variant/30 rounded-full flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary text-4xl">radar</span>
+            </div>
+          </div>
+          <div class="absolute top-1/4 left-1/4 w-3 h-3 bg-tertiary rounded-full status-pulse"></div>
+          <div class="absolute bottom-1/3 right-1/4 w-2 h-2 bg-primary rounded-full opacity-50"></div>
+          <div class="absolute top-1/2 right-10 w-4 h-4 bg-error rounded-full status-pulse"></div>
+          <div class="absolute inset-0 border-r-2 border-primary/20 rotate-45 pointer-events-none"></div>
+        </div>
+        <div class="absolute bottom-4 left-4 font-mono text-[10px] text-on-surface-variant/40">
+          SCAN_FREQ: 24.5 GHZ<br/>OBJECTS_DETECTED: 1,429
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENTO FEATURES -->
+  <section class="mb-32 reveal">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="md:col-span-2 bg-surface-container-high rounded-xl p-8 border border-outline-variant/10 flex flex-col justify-between min-h-[320px] relative overflow-hidden">
+        <div class="relative z-10">
+          <span class="material-symbols-outlined text-primary mb-4 text-3xl" style="font-variation-settings:'FILL' 1">satellite_alt</span>
+          <h3 class="text-2xl font-['Space_Grotesk'] font-bold mb-4">Real-Time Tracking</h3>
+          <p class="text-on-surface-variant max-w-md leading-relaxed">Continuous ingestion of NASA Near-Earth Object (NEO) data. Our processing engine maps trajectories with sub-millisecond precision, identifying potential impacts before they occur.</p>
+        </div>
+        <div class="mt-8 flex gap-4 overflow-hidden relative z-10">
+          <div class="px-4 py-2 bg-surface-container-lowest rounded border border-outline-variant/20 font-mono text-xs text-primary">NASA_NEO_V1</div>
+          <div class="px-4 py-2 bg-surface-container-lowest rounded border border-outline-variant/20 font-mono text-xs text-primary">VECTOR_ANALYSIS</div>
+          <div class="px-4 py-2 bg-surface-container-lowest rounded border border-outline-variant/20 font-mono text-xs text-primary">ORBIT_PRED</div>
+        </div>
+        <div class="absolute right-0 bottom-0 opacity-10 pointer-events-none">
+          <span class="material-symbols-outlined text-[200px]" style="font-variation-settings:'FILL' 1">public</span>
+        </div>
+      </div>
+
+      <div class="bg-surface-container-high rounded-xl p-8 border border-outline-variant/10 flex flex-col min-h-[320px]">
+        <span class="material-symbols-outlined text-tertiary mb-4 text-3xl" style="font-variation-settings:'FILL' 1">hub</span>
+        <h3 class="text-2xl font-['Space_Grotesk'] font-bold mb-4">Event-Driven Core</h3>
+        <p class="text-on-surface-variant leading-relaxed mb-6">Decoupled microservices using Apache Kafka for high-throughput messaging. Asynchronous alerting ensures no critical event is dropped.</p>
+        <div class="mt-auto p-4 bg-surface-container-lowest rounded border border-outline-variant/20">
+          <div class="flex items-center justify-between text-[10px] font-mono mb-2">
+            <span class="text-tertiary">KAFKA_CLUSTER</span>
+            <span class="text-on-surface-variant">NOMINAL</span>
+          </div>
+          <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+            <div class="h-full bg-tertiary kafka-bar rounded-full"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-surface-container-high rounded-xl p-8 border border-outline-variant/10 flex items-center gap-6 md:col-span-3">
+        <div class="flex-shrink-0 w-16 h-16 bg-surface-container-highest rounded-lg flex items-center justify-center">
+          <span class="material-symbols-outlined text-primary text-4xl">box</span>
+        </div>
+        <div>
+          <h3 class="text-xl font-['Space_Grotesk'] font-bold mb-1">Docker-Ready Architecture</h3>
+          <p class="text-on-surface-variant">Fully containerized infrastructure designed for seamless horizontal scaling across any cloud provider.</p>
+        </div>
+        <div class="ml-auto hidden md:flex gap-2">
+          <span class="px-3 py-1 bg-surface-container-lowest rounded text-[10px] font-mono border border-outline-variant/30">DOCKER-COMPOSE.YML</span>
+          <span class="px-3 py-1 bg-surface-container-lowest rounded text-[10px] font-mono border border-outline-variant/30">K8S_MANIFESTS</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TECH STACK -->
+  <section class="mb-32 reveal">
+    <h2 class="text-center text-sm font-['Space_Grotesk'] uppercase tracking-[0.4em] text-on-surface-variant/40 mb-12">Engineered with Precision</h2>
+    <div class="flex flex-wrap justify-center items-center gap-8 md:gap-16 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+      <div class="flex flex-col items-center gap-3">
+        <div class="w-12 h-12 bg-surface-container flex items-center justify-center rounded-lg"><span class="material-symbols-outlined text-3xl">code</span></div>
+        <span class="font-mono text-[10px]">Java 21</span>
+      </div>
+      <div class="flex flex-col items-center gap-3">
+        <div class="w-12 h-12 bg-surface-container flex items-center justify-center rounded-lg"><span class="material-symbols-outlined text-3xl">settings_input_component</span></div>
+        <span class="font-mono text-[10px]">Spring Boot</span>
+      </div>
+      <div class="flex flex-col items-center gap-3">
+        <div class="w-12 h-12 bg-surface-container flex items-center justify-center rounded-lg"><span class="material-symbols-outlined text-3xl">swap_calls</span></div>
+        <span class="font-mono text-[10px]">Kafka</span>
+      </div>
+      <div class="flex flex-col items-center gap-3">
+        <div class="w-12 h-12 bg-surface-container flex items-center justify-center rounded-lg"><span class="material-symbols-outlined text-3xl">database</span></div>
+        <span class="font-mono text-[10px]">MySQL</span>
+      </div>
+      <div class="flex flex-col items-center gap-3">
+        <div class="w-12 h-12 bg-surface-container flex items-center justify-center rounded-lg"><span class="material-symbols-outlined text-3xl">deployed_code</span></div>
+        <span class="font-mono text-[10px]">Docker</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- TELEMETRY PATH -->
+  <section class="bg-surface-container-lowest rounded-2xl p-12 border border-outline-variant/10 relative overflow-hidden reveal">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <div class="space-y-6">
+        <h2 class="text-4xl font-['Space_Grotesk'] font-bold">The Telemetry Path</h2>
+        <p class="text-on-surface-variant leading-relaxed">Data flows through our system in a linear, fault-tolerant sequence. From detection at NASA's remote observatories to your localized alert system, every byte is accounted for.</p>
+        <ul class="space-y-4">
+          <li class="flex items-start gap-4">
+            <span class="w-6 h-6 rounded bg-primary/10 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary mt-1">01</span>
+            <div><span class="block font-bold">Detection Ingest</span><span class="text-sm text-on-surface-variant">Consuming NASA's API payloads at scheduled intervals.</span></div>
+          </li>
+          <li class="flex items-start gap-4">
+            <span class="w-6 h-6 rounded bg-primary/10 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary mt-1">02</span>
+            <div><span class="block font-bold">Kafka Orchestration</span><span class="text-sm text-on-surface-variant">Filtering and routing threat vectors across partitioned topics.</span></div>
+          </li>
+          <li class="flex items-start gap-4">
+            <span class="w-6 h-6 rounded bg-primary/10 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary mt-1">03</span>
+            <div><span class="block font-bold">Notification Burst</span><span class="text-sm text-on-surface-variant">Triggering multi-channel alerts based on orbital proximity.</span></div>
+          </li>
+        </ul>
+        <a href="dashboard.html" class="mt-4 px-6 py-3 bg-primary text-on-primary font-['Space_Grotesk'] font-bold rounded-lg text-sm hover:brightness-110 transition flex items-center gap-2 inline-flex w-fit">
+          Enter Mission Control <span class="material-symbols-outlined text-base">arrow_forward</span>
+        </a>
+      </div>
+      <div class="relative flex justify-center">
+        <div class="w-full max-w-md bg-surface-container rounded-xl p-8 border border-outline-variant/10 font-mono text-xs space-y-4">
+          <div class="p-3 bg-surface-container-high border-l-2 border-primary text-on-surface">&gt; NASA_API_GET /neo/v1/feed</div>
+          <div class="flex justify-center"><span class="material-symbols-outlined text-outline-variant">expand_more</span></div>
+          <div class="p-3 bg-surface-container-high border-l-2 border-tertiary text-on-surface">&gt; KAFKA_PRODUCER: asteroid-raw-events</div>
+          <div class="flex justify-center"><span class="material-symbols-outlined text-outline-variant">expand_more</span></div>
+          <div class="p-3 bg-surface-container-high border-l-2 border-on-secondary-container text-on-surface">&gt; ALERT_SERVICE: trigger_dispatch</div>
+        </div>
+      </div>
+    </div>
+    <div class="absolute top-0 right-0 p-4">
+      <span class="font-mono text-[10px] text-primary opacity-20">SYSTEM_AUTH_REQUIRED_V2.0</span>
+    </div>
+  </section>
+</main>
+
+<!-- FOOTER -->
+<footer class="w-full border-t border-[#32353c]/20 bg-[#10131a] pt-12 pb-8">
+  <div class="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+    <div class="flex flex-col gap-2">
+      <span class="font-['Space_Grotesk'] font-bold text-[#dcb8ff]">ORBITAL_UI</span>
+      <span class="font-['JetBrains_Mono'] text-[10px] uppercase tracking-widest text-[#ffb77d]">© 2024 ORBITAL SYSTEMS • ALL TELEMETRY ACTIVE</span>
+    </div>
+    <div class="flex gap-8 font-['JetBrains_Mono'] text-[10px] uppercase tracking-widest">
+      <a class="text-[#e1e2eb]/40 hover:text-[#e1e2eb]/80 cursor-pointer transition-opacity">System Status: Nominal</a>
+      <a class="text-[#e1e2eb]/40 hover:text-[#e1e2eb]/80 cursor-pointer transition-opacity">Privacy</a>
+      <a class="text-[#e1e2eb]/40 hover:text-[#e1e2eb]/80 cursor-pointer transition-opacity">Legal</a>
+    </div>
+  </div>
+</footer>
+
+<!-- Deploy toast notification -->
+<div id="deploy-toast">
+  <span style="color:#ffb77d">▶</span> POST /api/v1/asteroid-alerting/alert → 200 OK · Kafka event published
+</div>
+
+<script>
+  // Scroll reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

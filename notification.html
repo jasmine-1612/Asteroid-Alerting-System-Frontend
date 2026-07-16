@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ORBITAL_SENTRY | Threat Log</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "on-primary":"#480081","background":"#10131a","surface-container-low":"#191c22","on-primary-container":"#a34bfc","tertiary-fixed-dim":"#ffb77d","surface-bright":"#363940","primary":"#dcb8ff","on-primary-fixed":"#2c0051","surface-tint":"#dcb8ff","primary-container":"#190032","on-tertiary-fixed":"#2f1500","on-secondary-container":"#b5bcc9","on-error":"#690005","tertiary-fixed":"#ffdcc3","surface-container-lowest":"#0b0e14","primary-fixed-dim":"#dcb8ff","on-primary-fixed-variant":"#6700b5","inverse-primary":"#8422dc","surface-variant":"#32353c","secondary-fixed":"#dce3f1","inverse-surface":"#e1e2eb","surface":"#10131a","outline-variant":"#45474b","secondary-container":"#454c57","secondary":"#c0c7d4","primary-fixed":"#efdbff","inverse-on-surface":"#2e3037","tertiary-container":"#1b0900","on-error-container":"#ffdad6","surface-dim":"#10131a","on-secondary-fixed-variant":"#404752","error":"#ffb4ab","on-tertiary-container":"#ba6500","on-tertiary":"#4d2600","on-surface-variant":"#c6c6cb","surface-container-highest":"#32353c","error-container":"#93000a","outline":"#909095","surface-container-high":"#272a31","tertiary":"#ffb77d","on-surface":"#e1e2eb","on-tertiary-fixed-variant":"#6e3900","surface-container":"#1d2026","secondary-fixed-dim":"#c0c7d4","on-secondary":"#2a313b","on-background":"#e1e2eb"
+        },
+        fontFamily: { "headline":["Space Grotesk"], "body":["Inter"], "label":["Space Grotesk"], "mono":["JetBrains Mono"] },
+        borderRadius: {"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"}
+      }
+    }
+  }
+</script>
+<style>
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  .status-pulse { box-shadow: 0 0 0 0 rgba(220,184,255,.4); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(220,184,255,.4)} 70%{box-shadow:0 0 0 10px rgba(220,184,255,0)} 100%{box-shadow:0 0 0 0 rgba(220,184,255,0)} }
+  .grid-bg { background-image: radial-gradient(circle, #32353c 1px, transparent 1px); background-size: 24px 24px; opacity: 0.1; }
+  @keyframes spin { to{transform:rotate(360deg)} } .spin{animation:spin .8s linear infinite;display:inline-block}
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:#1d2026;border:1px solid rgba(255,183,125,.3);padding:12px 20px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#ffb77d;z-index:9999;max-width:520px;width:90%;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;pointer-events:none}
+  #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  #toast.err{border-color:rgba(255,180,171,.4);color:#ffb4ab}
+  .notif-card{transition:transform .2s,box-shadow .2s}
+  .notif-card:hover{transform:translateY(-4px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+
+  /* Modal */
+  #detail-modal { display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); align-items:center; justify-content:center; }
+  #detail-modal.open { display:flex; }
+  #detail-box { background:#1d2026; border:1px solid rgba(69,71,75,.4); border-radius:16px; width:100%; max-width:520px; margin:24px; overflow:hidden; animation:modal-in .2s ease; }
+  @keyframes modal-in { from{opacity:0;transform:scale(.96) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
+</style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30 min-h-screen">
+
+<div class="fixed inset-0 grid-bg pointer-events-none"></div>
+
+<!-- DETAIL MODAL -->
+<div id="detail-modal" onclick="closeModal(event)">
+  <div id="detail-box">
+    <!-- header -->
+    <div id="modal-header" style="padding:20px 24px;border-bottom:1px solid rgba(69,71,75,.3);display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#909095;margin-bottom:4px" id="modal-id">ID: —</p>
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#e1e2eb" id="modal-name">—</h2>
+      </div>
+      <button onclick="document.getElementById('detail-modal').classList.remove('open')" style="color:#909095;background:none;border:none;cursor:pointer;padding:4px">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <!-- status bar -->
+    <div id="modal-status-bar" style="padding:12px 24px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(69,71,75,.2)">
+      <span id="modal-status-dot" style="width:8px;height:8px;border-radius:50%;background:#dcb8ff;flex-shrink:0"></span>
+      <span id="modal-status-text" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#dcb8ff"></span>
+      <span id="modal-tag" style="margin-left:auto;padding:2px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:10px"></span>
+    </div>
+    <!-- fields -->
+    <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:20px" id="modal-fields"></div>
+    <!-- footer -->
+    <div style="padding:14px 24px;background:#191c22;border-top:1px solid rgba(69,71,75,.2);display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#45474b" id="modal-priority">—</span>
+      <button onclick="document.getElementById('detail-modal').classList.remove('open')" style="padding:8px 20px;background:#dcb8ff;color:#480081;border:none;border-radius:6px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:.05em">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="fixed left-0 top-0 h-full flex flex-col pt-20 bg-[#1d2026] font-['Inter'] font-medium text-sm border-r border-[#32353c]/20 w-64 z-40">
+  <div class="px-6 mb-8">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center border border-outline-variant/20">
+        <span class="material-symbols-outlined text-tertiary">rocket_launch</span>
+      </div>
+      <div>
+        <h2 class="font-['Space_Grotesk'] text-lg font-bold text-[#ffb77d]">Command Center</h2>
+        <p class="text-xs text-on-surface-variant/60">Sector 7G Monitoring</p>
+      </div>
+    </div>
+  </div>
+  <nav class="flex-1 px-4 space-y-1">
+    <a class="text-slate-400 px-4 py-3 flex items-center gap-3 hover:bg-[#32353c]/50 transition-colors rounded" href="index.html">
+      <span class="material-symbols-outlined text-xl">dashboard</span><span>Dashboard</span>
+    </a>
+    <a class="text-slate-400 px-4 py-3 flex items-center gap-3 hover:bg-[#32353c]/50 transition-colors rounded" href="architecture.html">
+      <span class="material-symbols-outlined text-xl">account_tree</span><span>Architecture</span>
+    </a>
+    <a class="bg-[#32353c] text-[#dcb8ff] border-l-4 border-[#8A2BE2] px-4 py-3 flex items-center gap-3 rounded" href="#">
+      <span class="material-symbols-outlined text-xl">history_edu</span><span>Threat Log</span>
+    </a>
+  </nav>
+  <div class="px-4 pb-6 space-y-3">
+    <div class="bg-surface-container rounded-lg p-3 border border-outline-variant/10 space-y-2">
+      <p class="text-[9px] font-mono uppercase tracking-widest text-on-surface-variant mb-1">Live Status</p>
+      <div class="flex items-center justify-between">
+        <span class="text-[9px] font-mono">Alerting :8080</span>
+        <span class="text-[9px] font-mono" id="s-a" style="color:#facc15">checking…</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <span class="text-[9px] font-mono">Notify :8081</span>
+        <span class="text-[9px] font-mono" id="s-n" style="color:#facc15">checking…</span>
+      </div>
+    </div>
+    <button onclick="triggerScan()" id="scan-btn" class="w-full bg-primary hover:brightness-110 text-on-primary py-2.5 rounded-lg font-headline font-bold uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-2">
+      <span class="material-symbols-outlined text-sm" id="scan-icon">satellite_alt</span>
+      <span id="scan-lbl">Initiate Scan</span>
+    </button>
+  </div>
+  <footer class="mt-auto px-4 pb-6 space-y-1 border-t border-outline-variant/10 pt-4">
+    <a class="text-slate-400 px-4 py-2 flex items-center gap-3 hover:bg-[#32353c]/50 transition-colors rounded" href="http://localhost:8084" target="_blank">
+      <span class="material-symbols-outlined text-lg">terminal</span><span>Kafka UI ↗</span>
+    </a>
+  </footer>
+</aside>
+
+<!-- TOP NAV -->
+<header class="fixed top-0 left-0 right-0 h-16 bg-[#10131a] flex justify-between items-center w-full px-6 z-50 border-b border-surface-container-highest">
+  <div class="flex items-center gap-12">
+    <div class="text-xl font-bold font-headline tracking-tighter text-[#dcb8ff]">ORBITAL_SENTRY</div>
+    <nav class="hidden md:flex items-center gap-8 font-['Space_Grotesk'] uppercase tracking-widest text-sm">
+      <a class="text-slate-400 hover:text-[#dcb8ff] transition-colors" href="index.html">Live Feed</a>
+      <a class="text-[#dcb8ff] border-b-2 border-[#8A2BE2] pb-1" href="#">Threat Log</a>
+      <a class="text-slate-400 hover:text-[#dcb8ff] transition-colors" href="architecture.html">System Status</a>
+    </nav>
+  </div>
+  <div class="flex items-center gap-4">
+    <div class="bg-surface-container rounded-full px-4 py-1.5 flex items-center gap-2 border border-outline-variant/20">
+      <span class="w-2 h-2 rounded-full bg-primary status-pulse" id="hdr-dot"></span>
+      <span class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant" id="hdr-status">Checking…</span>
+    </div>
+    <button onclick="checkHealth()" class="p-2 text-slate-400 hover:bg-[#32353c] rounded transition-all">
+      <span class="material-symbols-outlined" id="hdr-refresh">refresh</span>
+    </button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="ml-64 pt-24 pb-12 px-8">
+
+  <div id="offline-banner" class="hidden mb-8 p-4 bg-error-container/20 border border-error/30 rounded-xl flex items-start gap-4">
+    <span class="material-symbols-outlined text-error text-2xl flex-shrink-0 mt-0.5">power_off</span>
+    <div class="flex-1">
+      <p class="font-headline font-bold text-error text-sm mb-1">Notification Service Unreachable</p>
+      <p class="text-[11px] font-mono text-on-surface-variant leading-relaxed" id="offline-msg">Cannot reach localhost:8081.</p>
+    </div>
+    <button onclick="checkHealth()" class="flex-shrink-0 px-4 py-2 bg-surface-container border border-outline-variant/20 text-xs font-mono rounded hover:bg-surface-bright">Retry</button>
+  </div>
+
+  <header class="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div class="max-w-2xl">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-tertiary font-mono text-sm tracking-tighter">[ TABLE: notification | DB: asteroid_alerting ]</span>
+      </div>
+      <h1 class="text-5xl font-headline font-bold text-on-surface tracking-tight mb-4">Notification History</h1>
+      <p class="text-on-surface-variant text-lg leading-relaxed">All asteroid proximity notifications from MySQL — including all historical records.</p>
+    </div>
+    <div class="flex gap-4">
+      <div class="bg-surface-container p-4 rounded-xl border border-outline-variant/10 min-w-[130px]">
+        <p class="text-on-surface-variant text-xs font-headline uppercase tracking-widest mb-1">Total Events</p>
+        <span class="text-3xl font-mono font-bold text-primary" id="h-total">—</span>
+      </div>
+      <div class="bg-surface-container p-4 rounded-xl border border-outline-variant/10 min-w-[130px]">
+        <p class="text-on-surface-variant text-xs font-headline uppercase tracking-widest mb-1">Emails Sent</p>
+        <span class="text-3xl font-mono font-bold text-tertiary" id="h-sent">—</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="mb-8 flex items-center justify-between bg-surface-container-low p-2 rounded-lg border border-outline-variant/10">
+    <div class="flex items-center gap-4 px-2">
+      <span class="material-symbols-outlined text-on-surface-variant">search</span>
+      <input id="q" oninput="filter()" class="bg-transparent border-none text-on-surface placeholder:text-outline focus:ring-0 font-mono text-sm w-64 outline-none" placeholder="Search by asteroid name…" type="text"/>
+    </div>
+    <div class="flex items-center gap-2">
+      <select id="fs" onchange="filter()" class="bg-surface-container border border-outline-variant/20 text-on-surface-variant text-xs font-mono rounded px-3 py-2 outline-none">
+        <option value="all">All Records</option>
+        <option value="sent">Email Sent</option>
+        <option value="pending">Email Pending</option>
+      </select>
+      <button onclick="load()" class="flex items-center gap-2 px-4 py-2 hover:bg-surface-container-highest rounded text-sm transition-colors text-on-surface-variant hover:text-primary">
+        <span class="material-symbols-outlined text-sm">refresh</span>Refresh
+      </button>
+      <button onclick="exportCSV()" class="flex items-center gap-2 px-4 py-2 hover:bg-surface-container-highest rounded text-sm transition-colors text-on-surface-variant hover:text-primary">
+        <span class="material-symbols-outlined text-sm">download</span>Export CSV
+      </button>
+    </div>
+  </div>
+
+  <div id="cards">
+    <div class="flex flex-col items-center gap-4 py-20">
+      <span class="material-symbols-outlined text-primary text-4xl spin">autorenew</span>
+      <p class="font-headline font-bold text-on-surface-variant">Loading from database…</p>
+    </div>
+  </div>
+
+  <div id="pag" class="hidden mt-12 flex flex-col items-center gap-4">
+    <p class="text-on-surface-variant font-mono text-[10px] uppercase tracking-widest" id="pag-info"></p>
+    <div class="flex items-center gap-3">
+      <button id="btn-p" onclick="pg(-1)" class="px-8 py-3 bg-surface-container border border-outline-variant/20 hover:bg-surface-container-highest transition-all rounded text-sm font-headline font-bold uppercase tracking-widest text-on-surface disabled:opacity-30" disabled>← Prev</button>
+      <span class="text-[10px] font-mono text-on-surface-variant" id="pag-lbl">Page 1</span>
+      <button id="btn-n" onclick="pg(1)" class="px-8 py-3 bg-surface-container border border-outline-variant/20 hover:bg-surface-container-highest transition-all rounded text-sm font-headline font-bold uppercase tracking-widest text-on-surface">Next →</button>
+    </div>
+  </div>
+</main>
+
+<div class="fixed bottom-6 right-6 z-50 pointer-events-none">
+  <div class="bg-surface-container-low/80 backdrop-blur-xl border border-outline-variant/20 p-4 rounded-lg pointer-events-auto">
+    <div class="flex items-center gap-4">
+      <div class="flex flex-col">
+        <span class="text-[10px] font-mono text-on-surface-variant uppercase tracking-widest">Records Loaded</span>
+        <span class="text-sm font-mono font-bold text-primary" id="footer-count">—</span>
+      </div>
+      <div class="w-px h-8 bg-outline-variant/20"></div>
+      <div class="flex flex-col">
+        <span class="text-[10px] font-mono text-on-surface-variant uppercase tracking-widest">Notify Service</span>
+        <span class="text-sm font-mono font-bold" id="footer-svc">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const A = 'http://localhost:8080';
+const N = 'http://localhost:8081';
+const KU = 'http://localhost:8084';
+const NOTIFS  = N + '/api/v1/notifications';
+const TRIGGER = A + '/api/v1/asteroid-alerting/alert';
+
+let all = [], filtered = [], page = 1;
+const PS = 25;
+let svc = { a: false, n: false };
+
+async function ft(url, opts = {}, ms = 6000) {
+  const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+  try { const r = await fetch(url, {...opts, signal: c.signal}); clearTimeout(t); return r; }
+  catch(e) { clearTimeout(t); throw e; }
+}
+
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = err ? 'err' : '';
+  el.setAttribute('id','toast'); el.classList.add('show');
+  setTimeout(() => el.classList.remove('show','err'), 4500);
+}
+
+function fmtDate(v) {
+  if (!v) return '—';
+  if (Array.isArray(v)) return v[0]+'-'+String(v[1]).padStart(2,'0')+'-'+String(v[2]).padStart(2,'0');
+  return String(v);
+}
+
+function fmtNum(v) {
+  if (v == null) return '—';
+  const n = Number(v); return isNaN(n) ? String(v) : n.toLocaleString();
+}
+
+// ── MODAL ──────────────────────────────────────────────────────
+function openModal(n) {
+  const sent = n.emailSent === true;
+  const accentColor = sent ? '#dcb8ff' : '#ffb77d';
+
+  document.getElementById('modal-id').textContent = 'ID: #' + (n.id ?? '—');
+  document.getElementById('modal-name').textContent = n.asteroidName ?? 'Unknown NEO';
+  document.getElementById('modal-status-dot').style.background = accentColor;
+  document.getElementById('modal-status-text').style.color = accentColor;
+  document.getElementById('modal-status-text').textContent = sent ? 'EMAIL DISPATCHED' : 'EMAIL PENDING';
+  document.getElementById('modal-priority').textContent = sent ? 'PRIORITY_B2 · ELEVATED_OBSERVATION' : 'PRIORITY_C4 · ROUTINE_MONITOR';
+
+  const tag = document.getElementById('modal-tag');
+  tag.textContent = sent ? 'SENT' : 'PENDING';
+  tag.style.cssText = sent
+    ? 'background:rgba(220,184,255,.1);color:#dcb8ff;border:1px solid rgba(220,184,255,.25);padding:2px 10px;border-radius:20px;font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700'
+    : 'background:rgba(255,183,125,.1);color:#ffb77d;border:1px solid rgba(255,183,125,.25);padding:2px 10px;border-radius:20px;font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700';
+
+  // Build field rows
+  const fields = [
+    { label: 'Asteroid Name',        value: n.asteroidName ?? '—',                         full: true },
+    { label: 'Record ID',            value: '#' + (n.id ?? '—') },
+    { label: 'Email Status',         value: sent ? 'Sent ✓' : 'Pending',  color: sent ? '#4ade80' : '#facc15' },
+    { label: 'Close Approach Date',  value: fmtDate(n.closeApproachDate) },
+    { label: 'Miss Distance',        value: n.missDistanceKilometers != null ? Number(n.missDistanceKilometers).toLocaleString() + ' km' : '—' },
+    { label: 'Est. Diameter (avg)',  value: n.estimatedDiameterAvgMeters != null ? Number(n.estimatedDiameterAvgMeters).toFixed(2) + ' m' : '—' },
+  ];
+
+  const fieldsEl = document.getElementById('modal-fields');
+  fieldsEl.innerHTML = fields.map(f => `
+    <div style="${f.full ? 'grid-column:span 2' : ''}">
+      <p style="font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#909095;margin-bottom:4px">${f.label}</p>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:500;color:${f.color || '#e1e2eb'}">${f.value}</p>
+    </div>
+  `).join('');
+
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('detail-modal'))
+    document.getElementById('detail-modal').classList.remove('open');
+}
+
+// Close on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('detail-modal').classList.remove('open');
+});
+
+// ── HEALTH ─────────────────────────────────────────────────────
+async function checkHealth() {
+  const refresh = document.getElementById('hdr-refresh');
+  if (refresh) refresh.classList.add('spin');
+  try {
+    const r = await ft(A + '/api/v1/asteroid-alerting/alert', {method:'OPTIONS'}, 4000);
+    svc.a = r.status < 500;
+    document.getElementById('s-a').textContent = svc.a ? 'UP' : 'DOWN';
+    document.getElementById('s-a').style.color  = svc.a ? '#4ade80' : '#ef4444';
+  } catch {
+    svc.a = false;
+    document.getElementById('s-a').textContent = 'OFFLINE';
+    document.getElementById('s-a').style.color  = '#ef4444';
+  }
+  try {
+    const r = await ft(NOTIFS, {}, 4000);
+    svc.n = r.status < 500;
+    document.getElementById('s-n').textContent = svc.n ? 'UP' : 'DOWN';
+    document.getElementById('s-n').style.color  = svc.n ? '#4ade80' : '#ef4444';
+  } catch {
+    svc.n = false;
+    document.getElementById('s-n').textContent = 'OFFLINE';
+    document.getElementById('s-n').style.color  = '#ef4444';
+  }
+  const hDot = document.getElementById('hdr-dot');
+  const hSts = document.getElementById('hdr-status');
+  const fSvc = document.getElementById('footer-svc');
+  if (svc.n) {
+    hDot.style.background = '#4ade80'; hSts.textContent = 'System: Nominal';
+    fSvc.textContent = 'ONLINE'; fSvc.style.color = '#4ade80';
+    document.getElementById('offline-banner').classList.add('hidden');
+    load();
+  } else {
+    hDot.style.background = '#ef4444'; hSts.textContent = 'System: Degraded';
+    fSvc.textContent = 'OFFLINE'; fSvc.style.color = '#ef4444';
+    document.getElementById('offline-banner').classList.remove('hidden');
+    showOffline();
+  }
+  if (refresh) refresh.classList.remove('spin');
+}
+
+async function load() {
+  if (!svc.n) { showOffline(); return; }
+  document.getElementById('cards').innerHTML =
+    '<div class="flex flex-col items-center gap-4 py-20"><span class="material-symbols-outlined text-primary text-4xl spin">autorenew</span><p class="font-headline font-bold text-on-surface-variant">Loading notification history…</p></div>';
+  try {
+    const r = await ft(NOTIFS, {}, 10000);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    all = Array.isArray(data) ? data : (data.content ?? data.data ?? data.notifications ?? []);
+    const total = data.totalElements ?? all.length;
+    const sent  = all.filter(n => n.emailSent === true).length;
+    document.getElementById('h-total').textContent = total;
+    document.getElementById('h-sent').textContent  = sent;
+    document.getElementById('footer-count').textContent = total;
+    page = 1; filter();
+    if (total === 0) toast('Connected · database is empty · trigger a scan first');
+    else toast('✓ Loaded ' + total + ' notification' + (total !== 1 ? 's' : '') + ' from MySQL');
+  } catch(err) {
+    showOffline(err.message);
+  }
+}
+
+function filter() {
+  const q  = document.getElementById('q').value.toLowerCase();
+  const fs = document.getElementById('fs').value;
+  filtered = all.filter(n => {
+    const name = (n.asteroidName ?? '').toLowerCase();
+    const sent = n.emailSent === true;
+    return (!q || name.includes(q) || String(n.id ?? '').includes(q)) &&
+           (fs === 'sent' ? sent : fs === 'pending' ? !sent : true);
+  });
+  page = 1; render();
+}
+
+function pg(d) {
+  const max = Math.ceil(filtered.length / PS);
+  page = Math.max(1, Math.min(max, page + d));
+  render();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function render() {
+  const container = document.getElementById('cards');
+  const pagArea   = document.getElementById('pag');
+  if (all.length === 0) {
+    container.innerHTML =
+      '<div class="flex flex-col items-center gap-4 py-20"><span class="material-symbols-outlined text-on-surface-variant text-5xl">inbox</span>' +
+      '<p class="font-headline font-bold text-on-surface-variant text-xl">No notifications in database</p>' +
+      '<button onclick="triggerScan()" class="mt-2 px-8 py-3 bg-primary text-on-primary font-headline font-bold rounded-lg text-sm hover:brightness-110 flex items-center gap-2"><span class="material-symbols-outlined">satellite_alt</span>Initiate Scan Now</button></div>';
+    pagArea.classList.add('hidden'); return;
+  }
+  if (filtered.length === 0) {
+    container.innerHTML =
+      '<div class="flex flex-col items-center gap-4 py-20"><span class="material-symbols-outlined text-on-surface-variant text-4xl">search_off</span>' +
+      '<p class="font-headline font-bold text-on-surface-variant">No results</p>' +
+      '<button onclick="document.getElementById(\'q\').value=\'\';document.getElementById(\'fs\').value=\'all\';filter()" class="px-4 py-2 bg-surface-container border border-outline-variant/20 text-xs font-mono rounded">Clear filters</button></div>';
+    pagArea.classList.add('hidden'); return;
+  }
+  const max   = Math.ceil(filtered.length / PS);
+  const start = (page - 1) * PS;
+  const slice = filtered.slice(start, start + PS);
+  container.innerHTML = '<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">' + slice.map(card).join('') + '</div>';
+  document.getElementById('pag-info').textContent = 'Showing ' + (start+1) + '–' + Math.min(start+PS, filtered.length) + ' of ' + filtered.length + ' transmission records';
+  document.getElementById('pag-lbl').textContent  = 'Page ' + page + ' / ' + max;
+  document.getElementById('btn-p').disabled = page <= 1;
+  document.getElementById('btn-n').disabled = page >= max;
+  pagArea.classList.remove('hidden');
+}
+
+function card(n) {
+  const id       = n.id ?? '—';
+  const name     = n.asteroidName ?? 'Unknown NEO';
+  const sent     = n.emailSent === true;
+  const approach = fmtDate(n.closeApproachDate);
+  const miss     = fmtNum(n.missDistanceKilometers);
+  const diam     = n.estimatedDiameterAvgMeters != null ? Number(n.estimatedDiameterAvgMeters).toFixed(1) + 'm' : '—';
+  let stripeColor, tagStyle, tagLabel, sentStyle, sentIcon, sentText, priority;
+  if (sent) {
+    stripeColor = '#dcb8ff';
+    tagStyle    = 'background:rgba(220,184,255,.1);color:#dcb8ff;border:1px solid rgba(220,184,255,.2)';
+    tagLabel    = 'ELEVATED_OBSERVATION';
+    sentStyle   = 'color:#dcb8ff';
+    sentIcon    = '<span class="material-symbols-outlined" style="font-size:16px;color:#dcb8ff;font-variation-settings:\'FILL\' 1">check_circle</span>';
+    sentText    = 'SENT';
+    priority    = 'PRIORITY_B2';
+  } else {
+    stripeColor = '#ffb77d';
+    tagStyle    = 'background:rgba(255,183,125,.1);color:#ffb77d;border:1px solid rgba(255,183,125,.2)';
+    tagLabel    = 'ROUTINE_MONITOR';
+    sentStyle   = 'color:#909095';
+    sentIcon    = '<span class="material-symbols-outlined" style="font-size:16px;color:#909095">schedule</span>';
+    sentText    = 'PENDING';
+    priority    = 'PRIORITY_C4';
+  }
+  // Encode n as base64 to pass into onclick safely
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(n))));
+  return `
+    <div class="notif-card group relative bg-surface-container-high rounded-xl overflow-hidden transition-all hover:translate-y-[-4px] border border-outline-variant/10">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:${stripeColor}"></div>
+      <div class="p-6">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <span class="font-mono text-xs text-on-surface-variant block mb-1">ID: #${id}</span>
+            <h3 class="text-2xl font-headline font-bold text-on-surface">${name}</h3>
+          </div>
+          <div class="flex flex-col items-end">
+            <span style="${tagStyle}" class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">${tagLabel}</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-y-6 gap-x-8">
+          <div>
+            <p class="text-on-surface-variant text-[10px] uppercase font-headline tracking-widest mb-1">Close Approach Date</p>
+            <p class="font-mono text-lg text-on-surface">${approach}</p>
+          </div>
+          <div>
+            <p class="text-on-surface-variant text-[10px] uppercase font-headline tracking-widest mb-1">Email Sent Status</p>
+            <div class="flex items-center gap-2">${sentIcon}<span class="font-mono font-bold" style="${sentStyle}">${sentText}</span></div>
+          </div>
+          <div>
+            <p class="text-on-surface-variant text-[10px] uppercase font-headline tracking-widest mb-1">Est. Diameter</p>
+            <p class="font-mono text-lg text-on-surface">${diam}</p>
+          </div>
+          <div>
+            <p class="text-on-surface-variant text-[10px] uppercase font-headline tracking-widest mb-1">Miss Distance (km)</p>
+            <p class="font-mono text-lg text-on-surface">${miss}</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-surface-container p-3 flex justify-between items-center border-t border-outline-variant/10">
+        <button onclick="openModal(JSON.parse(decodeURIComponent(escape(atob('${encoded}')))))" class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest">
+          <span class="material-symbols-outlined text-sm">visibility</span>View Details
+        </button>
+        <span class="text-[10px] font-mono text-outline">${priority}</span>
+      </div>
+    </div>`;
+}
+
+function showOffline(msg) {
+  document.getElementById('cards').innerHTML =
+    '<div class="flex flex-col items-center gap-4 py-20">' +
+    '<span class="material-symbols-outlined text-error text-5xl">cloud_off</span>' +
+    '<p class="font-headline font-bold text-error text-xl">Cannot Load Notifications</p>' +
+    (msg ? '<p class="text-sm font-mono text-on-surface-variant/70 text-center max-w-md" style="color:#ffb4ab">' + msg + '</p>' : '') +
+    '<button onclick="checkHealth()" class="mt-2 px-6 py-3 bg-surface-container border border-outline-variant/20 text-sm font-mono rounded hover:bg-surface-bright flex items-center gap-2"><span class="material-symbols-outlined text-sm">refresh</span>Retry</button></div>';
+  document.getElementById('pag').classList.add('hidden');
+  ['h-total','h-sent','footer-count'].forEach(id => document.getElementById(id).textContent = '—');
+}
+
+async function triggerScan() {
+  if (!svc.a) { toast('✕ Alerting service offline', true); return; }
+  const btn  = document.getElementById('scan-btn');
+  const icon = document.getElementById('scan-icon');
+  const lbl  = document.getElementById('scan-lbl');
+  btn.disabled = true; icon.classList.add('spin'); icon.textContent = 'autorenew'; lbl.textContent = 'Scanning…';
+  try {
+    const r = await ft(TRIGGER, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' }, 15000);
+    if (r.ok) { toast('✓ Scan triggered · refreshing in 4 seconds…'); setTimeout(() => load(), 4000); }
+    else toast('✕ HTTP ' + r.status, true);
+  } catch(err) { toast('✕ ' + err.message, true); checkHealth(); }
+  finally { btn.disabled = false; icon.classList.remove('spin'); icon.textContent = 'satellite_alt'; lbl.textContent = 'Initiate Scan'; }
+}
+
+function exportCSV() {
+  if (!filtered.length) { toast('No data to export', true); return; }
+  const cols = ['id','asteroidName','closeApproachDate','missDistanceKilometers','estimatedDiameterAvgMeters','emailSent'];
+  const rows = filtered.map(n => cols.map(c => {
+    const v = n[c]; if (v == null) return '""'
+    if (Array.isArray(v)) return '"' + v.join('-') + '"';
+    return JSON.stringify(String(v));
+  }).join(','));
+  const csv = [cols.join(','), ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = 'notifications_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  toast('✓ Exported ' + filtered.length + ' records');
+}
+
+checkHealth();
+setInterval(checkHealth, 30000);
+setInterval(() => { if (svc.n) load(); }, 60000);
+</script>
+</body></html>

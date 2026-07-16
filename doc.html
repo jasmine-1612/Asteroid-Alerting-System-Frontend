@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Asteroid Alerting System | API Reference</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "surface-container-lowest": "#0b0e14",
+          "secondary-fixed-dim": "#c0c7d4",
+          "tertiary-fixed-dim": "#ffb77d",
+          "on-surface": "#e1e2eb",
+          "secondary-container": "#454c57",
+          "inverse-on-surface": "#2e3037",
+          "tertiary-container": "#1b0900",
+          "on-error": "#690005",
+          "error-container": "#93000a",
+          "on-primary-fixed": "#2c0051",
+          "surface-container-highest": "#32353c",
+          "surface": "#10131a",
+          "on-primary-container": "#a34bfc",
+          "on-tertiary": "#4d2600",
+          "inverse-surface": "#e1e2eb",
+          "surface-container-high": "#272a31",
+          "primary-fixed-dim": "#dcb8ff",
+          "tertiary": "#ffb77d",
+          "surface-container": "#1d2026",
+          "outline": "#909095",
+          "on-secondary-fixed": "#151c26",
+          "on-error-container": "#ffdad6",
+          "on-background": "#e1e2eb",
+          "primary": "#dcb8ff",
+          "on-tertiary-fixed": "#2f1500",
+          "secondary": "#c0c7d4",
+          "outline-variant": "#45474b",
+          "on-secondary": "#2a313b",
+          "on-primary": "#480081",
+          "surface-dim": "#10131a",
+          "on-secondary-container": "#b5bcc9",
+          "on-tertiary-fixed-variant": "#6e3900",
+          "tertiary-fixed": "#ffdcc3",
+          "background": "#10131a",
+          "surface-tint": "#dcb8ff",
+          "on-primary-fixed-variant": "#6700b5",
+          "surface-container-low": "#191c22",
+          "primary-container": "#190032",
+          "on-tertiary-container": "#ba6500",
+          "on-surface-variant": "#c6c6cb",
+          "surface-variant": "#32353c",
+          "inverse-primary": "#8422dc",
+          "primary-fixed": "#efdbff",
+          "surface-bright": "#363940",
+          "on-secondary-fixed-variant": "#404752",
+          "error": "#ffb4ab",
+          "secondary-fixed": "#dce3f1"
+        },
+        fontFamily: {
+          "headline": ["Space Grotesk"],
+          "body": ["Inter"],
+          "label": ["Space Grotesk"]
+        },
+        borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+      },
+    },
+  }
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .grid-bg {
+    background-image: radial-gradient(circle, rgba(144, 144, 149, 0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .endpoint-section { display: none; }
+  .endpoint-section.active { display: block; }
+  .nav-item { transition: all 0.15s ease; }
+  .nav-item.active {
+    background: #32353c;
+    color: #dcb8ff;
+    border-left: 4px solid #8A2BE2;
+  }
+  .nav-item:not(.active) {
+    color: #6b7280;
+    border-left: 4px solid transparent;
+  }
+</style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30 selection:text-primary-fixed">
+
+<!-- TopNavBar -->
+<header class="fixed top-0 z-50 w-full h-16 flex justify-between items-center px-6 bg-[#10131a]">
+  <div class="flex items-center gap-8">
+    <span class="text-xl font-black text-[#dcb8ff] tracking-tighter font-headline uppercase">Asteroid Alerting System</span>
+    <nav class="hidden md:flex gap-6 items-center">
+      
+      <a class="font-['Space_Grotesk'] uppercase tracking-widest text-xs text-[#dcb8ff] border-b-2 border-[#8A2BE2] pb-1" href="#">Endpoints</a>
+      
+      <a class="font-['Space_Grotesk'] uppercase tracking-widest text-xs text-gray-400 hover:text-gray-200 transition-colors duration-200" href="http://127.0.0.1:5501/architecture.html">Architecture</a>
+    </nav>
+  </div>
+  <div class="flex items-center gap-4">
+    <div class="relative hidden sm:block">
+      <input class="bg-surface-container-highest border-none text-sm px-4 py-1.5 rounded-lg w-64 focus:ring-1 focus:ring-primary/50 text-on-surface-variant font-body" placeholder="Search documentation..." type="text"/>
+    </div>
+    <button class="p-2 hover:bg-[#32353c]/50 transition-colors duration-200 rounded-lg">
+      <span class="material-symbols-outlined text-on-surface-variant">terminal</span>
+    </button>
+    <button class="p-2 hover:bg-[#32353c]/50 transition-colors duration-200 rounded-lg">
+      <span class="material-symbols-outlined text-on-surface-variant">settings</span>
+    </button>
+    <div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center overflow-hidden border border-outline-variant/30">
+      <img alt="Developer Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvxq9lyWfZmD-fR9YZ9BEiBHfF1reic0RniGjUi5munkPjYMulX_Mn5kM3UI8Xwtxbc7JlS0oumKhjPPINqdQq7QGv2MxQsIYxX7xXXI4WuV77cOVHpYOwoCQAOrf9l6PpaW_wvOxkT_QAzDCjsfUfaxXoWZtGpbDo9wtBPwOFFABkxvbcD7c2j0UHwjT5_Vaj9SldjFeF5bc63KD30oUzOT9UkiXj2f59l0MdVphSCfSa6G9j_CPa31BU-JsBzRi3bNautgPXQpE"/>
+    </div>
+  </div>
+</header>
+
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 bg-[#10131a] flex flex-col border-r border-white/5 z-40 hidden md:flex">
+  <div class="p-6">
+    <h2 class="font-bold text-[#ffb77d] font-headline text-xs tracking-widest uppercase">API Reference</h2>
+    <p class="text-[10px] text-gray-500 font-mono mt-1 uppercase">v1.0.4-STABLE</p>
+  </div>
+  <nav class="flex-1 px-2 space-y-1">
+    <button onclick="switchTab('alert')" id="nav-alert" class="nav-item active w-full text-left flex items-center gap-3 px-4 py-3 font-['JetBrains_Mono'] text-sm">
+      <span class="material-symbols-outlined text-[20px]">warning</span>
+      <span>v1/alert</span>
+    </button>
+    <button onclick="switchTab('notifications')" id="nav-notifications" class="nav-item w-full text-left flex items-center gap-3 px-4 py-3 font-['JetBrains_Mono'] text-sm hover:bg-[#1d2026] hover:text-white">
+      <span class="material-symbols-outlined text-[20px]">notifications</span>
+      <span>v1/notifications</span>
+    </button>
+  </nav>
+  <div class="p-4 border-t border-white/5 space-y-4">
+    <div class="flex flex-col gap-2">
+      <a class="flex items-center gap-3 text-gray-500 text-xs px-2 py-1 hover:text-white transition-colors" href="#">
+        <span class="material-symbols-outlined text-[18px]">description</span>
+        <span>Documentation</span>
+      </a>
+      <a class="flex items-center gap-3 text-gray-500 text-xs px-2 py-1 hover:text-white transition-colors" href="#">
+        <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+        <span>System Status</span>
+      </a>
+      <a class="flex items-center gap-3 text-gray-500 text-xs px-2 py-1 hover:text-white transition-colors" href="http://127.0.0.1:5501/architecture.html">
+        <span class="material-symbols-outlined text-[18px]">account_tree</span>
+        <span>Architecture</span>
+      </a>
+    </div>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="md:ml-64 mt-16 p-8 pb-32 grid-bg min-h-screen">
+  <div class="max-w-6xl mx-auto space-y-12">
+
+    <!-- ==================== ALERT ENDPOINT ==================== -->
+    <div id="section-alert" class="endpoint-section active">
+      <section class="space-y-4">
+        <div class="flex items-center gap-3">
+          <span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-mono font-bold tracking-tighter">POST</span>
+          <h1 class="text-4xl font-headline font-bold text-on-surface tracking-tight">/api/v1/asteroid-alerting/alert</h1>
+        </div>
+        <p class="text-on-surface-variant max-w-2xl text-lg leading-relaxed">Fetches Near-Earth Object (NEO) data for the given date range and proximity threshold, then publishes each qualifying asteroid as an individual event to the Kafka topic <code class="bg-surface-container-highest px-1.5 py-0.5 rounded mono text-primary text-sm">asteroidalerting</code>. The notification consumer downstream processes and persists these events.</p>
+        <div class="flex items-center gap-3 pt-1">
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container border border-outline-variant/20">
+            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span class="mono text-[10px] text-on-surface-variant uppercase tracking-widest">Kafka Producer</span>
+            <span class="mono text-[10px] text-primary">asteroidalerting-producer-1</span>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container border border-outline-variant/20">
+            <span class="material-symbols-outlined text-tertiary text-[16px]">tag</span>
+            <span class="mono text-[10px] text-on-surface-variant uppercase tracking-widest">Kafka</span>
+            <span class="mono text-[10px] text-tertiary">v4.1.1</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-10">
+        <!-- Left Column -->
+        <div class="lg:col-span-7 space-y-10">
+          <!-- Parameters -->
+          <div class="space-y-6">
+            <h3 class="text-xl font-headline font-bold flex items-center gap-2">
+              <span class="w-1.5 h-6 bg-primary rounded-full"></span>
+              Request Parameters
+            </h3>
+            <div class="overflow-hidden rounded-xl bg-surface-container-low border border-outline-variant/10">
+              <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr class="bg-surface-container-high text-on-surface-variant uppercase text-[10px] tracking-widest mono">
+                    <th class="px-6 py-4">Field</th>
+                    <th class="px-6 py-4">Type</th>
+                    <th class="px-6 py-4">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/10">
+                  <tr class="hover:bg-surface-container/50 transition-colors">
+                    <td class="px-6 py-5">
+                      <div class="flex flex-col">
+                        <span class="mono text-primary font-bold">start_date</span>
+                        <span class="text-[10px] text-tertiary uppercase mono mt-1">Required</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 mono text-gray-400">date (ISO8601)</td>
+                    <td class="px-6 py-5 text-on-surface-variant">Scanning start window. Defaults to current UTC timestamp if omitted.</td>
+                  </tr>
+                  <tr class="hover:bg-surface-container/50 transition-colors">
+                    <td class="px-6 py-5">
+                      <div class="flex flex-col">
+                        <span class="mono text-primary font-bold">end_date</span>
+                        <span class="text-[10px] text-gray-400 uppercase mono mt-1">Optional</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 mono text-gray-400">date (ISO8601)</td>
+                    <td class="px-6 py-5 text-on-surface-variant">Scanning end window. Must be within 90 days of start date.</td>
+                  </tr>
+                  <tr class="hover:bg-surface-container/50 transition-colors">
+                    <td class="px-6 py-5">
+                      <div class="flex flex-col">
+                        <span class="mono text-primary font-bold">distance_threshold_km</span>
+                        <span class="text-[10px] text-tertiary uppercase mono mt-1">Required</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 mono text-gray-400">integer</td>
+                    <td class="px-6 py-5 text-on-surface-variant">Maximum proximity in kilometers for object detection alerts.</td>
+                  </tr>
+                  <tr class="hover:bg-surface-container/50 transition-colors">
+                    <td class="px-6 py-5">
+                      <div class="flex flex-col">
+                        <span class="mono text-primary font-bold">priority</span>
+                        <span class="text-[10px] text-gray-400 uppercase mono mt-1">Optional</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 mono text-gray-400">string (enum)</td>
+                    <td class="px-6 py-5 text-on-surface-variant">
+                      Priority level for the notification.<br/>
+                      <div class="flex flex-wrap gap-2 mt-2">
+                        <span class="px-2 py-0.5 rounded bg-surface-container-highest text-[10px] mono">LOW</span>
+                        <span class="px-2 py-0.5 rounded bg-surface-container-highest text-[10px] mono">MEDIUM</span>
+                        <span class="px-2 py-0.5 rounded bg-surface-container-highest text-[10px] mono">HIGH</span>
+                        <span class="px-2 py-0.5 rounded border border-tertiary/30 text-tertiary text-[10px] mono">CRITICAL</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Response Status -->
+          <div class="space-y-6">
+            <h3 class="text-xl font-headline font-bold flex items-center gap-2">
+              <span class="w-1.5 h-6 bg-tertiary rounded-full"></span>
+              Response Status
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-surface-container rounded-xl p-5 border border-green-500/20 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-green-900/40 flex items-center justify-center flex-shrink-0">
+                  <span class="material-symbols-outlined text-green-400 text-[20px]">check_circle</span>
+                </div>
+                <div>
+                  <span class="text-[10px] mono bg-green-900/30 text-green-400 px-2 py-0.5 rounded">200 OK</span>
+                  <p class="text-xs text-on-surface-variant mt-1.5">Alert triggered successfully. The scan sequence has been initiated.</p>
+                </div>
+              </div>
+              <div class="bg-surface-container rounded-xl p-5 border border-error/20 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-error-container/30 flex items-center justify-center flex-shrink-0">
+                  <span class="material-symbols-outlined text-error text-[20px]">error</span>
+                </div>
+                <div>
+                  <span class="text-[10px] mono bg-error-container/30 text-error px-2 py-0.5 rounded">4XX ERROR</span>
+                  <p class="text-xs text-on-surface-variant mt-1.5">Request failed. Check parameters or authentication credentials.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Terminal -->
+        <div class="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 overflow-hidden shadow-2xl">
+            <div class="bg-surface-container-high px-4 py-3 flex items-center justify-between border-b border-outline-variant/20">
+              <div class="flex gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-error/40"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-tertiary/40"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-green-500/40"></div>
+              </div>
+              <span class="text-[10px] mono text-gray-500 uppercase tracking-widest">Interactive Sandbox</span>
+              <button class="text-primary hover:text-primary-fixed transition-colors">
+                <span class="material-symbols-outlined text-[18px]">content_copy</span>
+              </button>
+            </div>
+            <div class="p-6 space-y-6">
+              <div class="space-y-3">
+                <h4 class="text-[10px] text-gray-500 mono uppercase tracking-tighter">Request Example (cURL)</h4>
+                <div class="bg-[#0b0e14] p-4 rounded-lg border border-primary/10 overflow-x-auto">
+                  <code class="mono text-sm leading-relaxed text-on-surface-variant block whitespace-pre">curl -X POST "https://api.orbital.io/v1/alert" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "distance_threshold_km": 1500000,
+    "priority": "CRITICAL"
+  }'</code>
+                </div>
+              </div>
+              <button class="w-full bg-primary py-3 rounded-lg text-on-primary font-headline font-bold flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                EXECUTE TEST REQUEST
+              </button>
+              <div class="space-y-3 pt-4 border-t border-outline-variant/10">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-[10px] text-gray-500 mono uppercase tracking-tighter">Server Response</h4>
+                  <span class="text-[10px] mono text-green-400 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    200 OK (142ms)
+                  </span>
+                </div>
+                <!-- Kafka event log simulation -->
+                <div class="bg-[#10131a] p-4 rounded-lg border border-outline-variant/10 space-y-2">
+                  <p class="text-[10px] mono text-gray-500 uppercase tracking-widest mb-3">Kafka Topic Events Published</p>
+                  <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                    <span class="mono text-xs text-on-surface-variant">Asteroid alert sent → <span class="text-primary">(2023 RJ3)</span></span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                    <span class="mono text-xs text-on-surface-variant">Asteroid alert sent → <span class="text-primary">413989 (2007 EL88)</span></span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                    <span class="mono text-xs text-on-surface-variant">Asteroid alert sent → <span class="text-primary">(2020 KK5)</span></span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                    <span class="mono text-xs text-on-surface-variant">Asteroid alert sent → <span class="text-primary">(2013 FW13)</span></span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                    <span class="mono text-xs text-on-surface-variant">Asteroid alert sent → <span class="text-primary">(2019 TP1)</span></span>
+                  </div>
+                  <div class="mt-3 pt-3 border-t border-outline-variant/10 flex items-center justify-between">
+                    <span class="mono text-[10px] text-gray-500">ProducerId: 5000 · epoch: 0 · idempotent</span>
+                    <span class="mono text-[10px] text-green-400">7 events</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="p-6 rounded-xl bg-gradient-to-br from-surface-container to-surface-container-high border border-outline-variant/10">
+            <h4 class="font-headline font-bold text-sm mb-2 text-on-surface flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[18px]">info</span>
+              How it works
+            </h4>
+            <p class="text-xs text-on-surface-variant leading-relaxed">
+              Each asteroid matching your threshold is published as a separate message to the <code class="bg-surface-container-highest px-1 rounded mono text-primary">asteroidalerting</code> Kafka topic. The idempotent producer (<code class="bg-surface-container-highest px-1 rounded mono text-primary">ProducerId: 5000</code>) guarantees exactly-once delivery. The downstream notification consumer then saves each event to the database.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- END ALERT SECTION -->
+
+
+    <!-- ==================== NOTIFICATIONS ENDPOINT ==================== -->
+    <div id="section-notifications" class="endpoint-section">
+      <section class="space-y-4">
+        <div class="flex items-center gap-3">
+          <span class="bg-green-500/10 text-green-400 px-3 py-1 rounded-full text-xs font-mono font-bold tracking-tighter">GET</span>
+          <h1 class="text-4xl font-headline font-bold text-on-surface tracking-tight">/api/v1/asteroid-alerting/notifications</h1>
+        </div>
+        <p class="text-on-surface-variant max-w-2xl text-lg leading-relaxed">Returns persisted asteroid notification records consumed from the <code class="bg-surface-container-highest px-1.5 py-0.5 rounded mono text-primary text-sm">asteroidalerting</code> Kafka topic. Each record represents a single NEO event that passed the alert threshold and was saved to the database by the notification consumer.</p>
+        <div class="flex items-center gap-3 pt-1">
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container border border-outline-variant/20">
+            <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+            <span class="mono text-[10px] text-on-surface-variant uppercase tracking-widest">Kafka Consumer</span>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container border border-outline-variant/20">
+            <span class="material-symbols-outlined text-primary text-[16px]">storage</span>
+            <span class="mono text-[10px] text-on-surface-variant uppercase tracking-widest">MySQL</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-10">
+        <!-- Left Column -->
+        <div class="lg:col-span-7 space-y-10">
+
+          <!-- Schema Fields -->
+          <div class="space-y-6">
+            <h3 class="text-xl font-headline font-bold flex items-center gap-2">
+              <span class="w-1.5 h-6 bg-green-500 rounded-full"></span>
+              Data Schema — Notification Fields
+            </h3>
+            <div class="overflow-hidden rounded-xl bg-surface-container-low border border-outline-variant/10">
+              <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr class="bg-surface-container-high text-on-surface-variant uppercase text-[10px] tracking-widest mono">
+                    <th class="px-6 py-4">Field</th>
+                    <th class="px-6 py-4">Type</th>
+                    <th class="px-6 py-4">Nullable</th>
+                    <th class="px-6 py-4">Notes</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/10">
+                  <tr class="hover:bg-surface-container/50 transition-colors">
+                    <td class="px-6 py-5">
+                      <div class="flex flex-col">
+                        <span class="mono text-primary font-bold">id</span>
+                        <span class="text-[10px] text-tertiary uppercase mono mt-1">Primary Key</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 mono text-gray-400">bigint</td>
+                    <td class="px-6 py-5">
+                      <span class="px-2 py-0.5 rounded bg-surface-container-highest text-[10px] mono text-gray-400">NOT NULL</span>
+                    </td>
+                    <td class="px-6 py-5 text-on-surface-variant">Auto-incremented unique identifier for each notification record.</td>
+                  </tr>
+                  <tr class="hover:bg-surface-container/50 transition-colors">
+                    <td class="px-6 py-5">
+                      <div class="flex flex-col">
+                        <span class="mono text-primary font-bold">asteroid_name</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 mono text-gray-400">varchar(255)</td>
+                    <td class="px-6 py-5">
+                      <span class="px-2 py-0.5 rounded bg-yellow-900/30 text-yellow-400 text-[10px] mono">NULLABLE</span>
+                    </td>
+                    <td class="px-6 py-5 text-on-surface-variant">Designated name of the detected near-Earth object.</td>
+                  </tr>
+                  <tr class="hover:bg-surface-container/50 transition-colors">
+                    <td class="px-6 py-5">
+                      <div class="flex flex-col">
+                        <span class="mono text-primary font-bold">close_approach_date</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 mono text-gray-400">date</td>
+                    <td class="px-6 py-5">
+                      <span class="px-2 py-0.5 rounded bg-yellow-900/30 text-yellow-400 text-[10px] mono">NULLABLE</span>
+                    </td>
+                    <td class="px-6 py-5 text-on-surface-variant">Date of closest predicted approach to Earth.</td>
+                  </tr>
+                  <tr class="hover:bg-surface-container/50 transition-colors">
+                    <td class="px-6 py-5">
+                      <div class="flex flex-col">
+                        <span class="mono text-primary font-bold">email_sent</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 mono text-gray-400">bit(1)</td>
+                    <td class="px-6 py-5">
+                      <span class="px-2 py-0.5 rounded bg-surface-container-highest text-[10px] mono text-gray-400">NOT NULL</span>
+                    </td>
+                    <td class="px-6 py-5 text-on-surface-variant">Flag indicating whether an email alert has been dispatched for this event. <span class="mono text-tertiary text-[10px]">0 = No, 1 = Yes</span></td>
+                  </tr>
+                  <tr class="hover:bg-surface-container/50 transition-colors">
+                    <td class="px-6 py-5">
+                      <div class="flex flex-col">
+                        <span class="mono text-primary font-bold">estimated_diameter_avg_meters</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 mono text-gray-400">double</td>
+                    <td class="px-6 py-5">
+                      <span class="px-2 py-0.5 rounded bg-surface-container-highest text-[10px] mono text-gray-400">NOT NULL</span>
+                    </td>
+                    <td class="px-6 py-5 text-on-surface-variant">Average of the min and max estimated diameters of the object in meters.</td>
+                  </tr>
+                  <tr class="hover:bg-surface-container/50 transition-colors">
+                    <td class="px-6 py-5">
+                      <div class="flex flex-col">
+                        <span class="mono text-primary font-bold">miss_distance_kilometers</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-5 mono text-gray-400">decimal(38,2)</td>
+                    <td class="px-6 py-5">
+                      <span class="px-2 py-0.5 rounded bg-yellow-900/30 text-yellow-400 text-[10px] mono">NULLABLE</span>
+                    </td>
+                    <td class="px-6 py-5 text-on-surface-variant">Distance in kilometers by which the object will miss Earth at closest approach.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Response Status -->
+          <div class="space-y-6">
+            <h3 class="text-xl font-headline font-bold flex items-center gap-2">
+              <span class="w-1.5 h-6 bg-tertiary rounded-full"></span>
+              Response Status
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-surface-container rounded-xl p-5 border border-green-500/20 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-green-900/40 flex items-center justify-center flex-shrink-0">
+                  <span class="material-symbols-outlined text-green-400 text-[20px]">check_circle</span>
+                </div>
+                <div>
+                  <span class="text-[10px] mono bg-green-900/30 text-green-400 px-2 py-0.5 rounded">200 OK</span>
+                  <p class="text-xs text-on-surface-variant mt-1.5">Notification records returned successfully.</p>
+                </div>
+              </div>
+              <div class="bg-surface-container rounded-xl p-5 border border-error/20 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-error-container/30 flex items-center justify-center flex-shrink-0">
+                  <span class="material-symbols-outlined text-error text-[20px]">error</span>
+                </div>
+                <div>
+                  <span class="text-[10px] mono bg-error-container/30 text-error px-2 py-0.5 rounded">4XX ERROR</span>
+                  <p class="text-xs text-on-surface-variant mt-1.5">Request failed. Verify query parameters and credentials.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Terminal -->
+        <div class="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 overflow-hidden shadow-2xl">
+            <div class="bg-surface-container-high px-4 py-3 flex items-center justify-between border-b border-outline-variant/20">
+              <div class="flex gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-error/40"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-tertiary/40"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-green-500/40"></div>
+              </div>
+              <span class="text-[10px] mono text-gray-500 uppercase tracking-widest">Interactive Sandbox</span>
+              <button class="text-primary hover:text-primary-fixed transition-colors">
+                <span class="material-symbols-outlined text-[18px]">content_copy</span>
+              </button>
+            </div>
+            <div class="p-6 space-y-6">
+              <div class="space-y-3">
+                <h4 class="text-[10px] text-gray-500 mono uppercase tracking-tighter">Request Example (cURL)</h4>
+                <div class="bg-[#0b0e14] p-4 rounded-lg border border-primary/10 overflow-x-auto">
+                  <code class="mono text-sm leading-relaxed text-on-surface-variant block whitespace-pre">curl -G "https://api.orbital.io/v1/notifications" \
+  -H "Content-Type: application/json"</code>
+                </div>
+              </div>
+
+              <button class="w-full bg-primary py-3 rounded-lg text-on-primary font-headline font-bold flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                EXECUTE TEST REQUEST
+              </button>
+
+              <div class="space-y-3 pt-4 border-t border-outline-variant/10">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-[10px] text-gray-500 mono uppercase tracking-tighter">Server Response</h4>
+                  <span class="text-[10px] mono text-green-400 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    200 OK (98ms)
+                  </span>
+                </div>
+                <div class="bg-[#10131a] p-4 rounded-lg border border-outline-variant/10">
+                  <pre class="mono text-xs leading-relaxed text-on-surface-variant">[
+  {
+    "<span class="text-primary">id</span>": <span class="text-tertiary">1</span>,
+    "<span class="text-primary">asteroid_name</span>": <span class="text-tertiary">"(2024 BX1)"</span>,
+    "<span class="text-primary">close_approach_date</span>": <span class="text-tertiary">"2024-03-20"</span>,
+    "<span class="text-primary">email_sent</span>": <span class="text-tertiary">1</span>,
+    "<span class="text-primary">estimated_diameter_avg_meters</span>": <span class="text-tertiary">47.82</span>,
+    "<span class="text-primary">miss_distance_kilometers</span>": <span class="text-tertiary">"1482304.50"</span>
+  }
+]</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-6 rounded-xl bg-gradient-to-br from-surface-container to-surface-container-high border border-outline-variant/10">
+            <h4 class="font-headline font-bold text-sm mb-2 text-on-surface flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[18px]">info</span>
+              Developer Tip
+            </h4>
+            <p class="text-xs text-on-surface-variant leading-relaxed">
+              The <code class="bg-surface-container-highest px-1 rounded mono text-primary">email_sent</code> field uses a <code class="bg-surface-container-highest px-1 rounded mono text-primary">bit(1)</code> — treat <code class="bg-surface-container-highest px-1 rounded mono text-tertiary">1</code> as sent and <code class="bg-surface-container-highest px-1 rounded mono text-tertiary">0</code> as pending when building notification dashboards.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- END NOTIFICATIONS SECTION -->
+
+  </div>
+</main>
+
+<!-- Footer -->
+<footer class="fixed bottom-0 z-40 w-full h-12 flex justify-between items-center px-8 bg-[#0B0E14] border-t border-white/5">
+  <div class="flex items-center gap-6">
+    <span class="text-[#ffb77d] font-bold font-headline text-[10px] tracking-widest uppercase">AAS CORE</span>
+    <span class="font-['JetBrains_Mono'] text-[10px] uppercase tracking-tighter text-gray-600">© 2024 AAS CORE. SYSTEM STATUS: NOMINAL</span>
+  </div>
+  <div class="flex gap-6">
+    <a class="font-['JetBrains_Mono'] text-[10px] uppercase tracking-tighter text-gray-600 hover:text-[#dcb8ff] transition-colors" href="#">Legal</a>
+    <a class="font-['JetBrains_Mono'] text-[10px] uppercase tracking-tighter text-gray-600 hover:text-[#dcb8ff] transition-colors" href="#">Privacy</a>
+    <a class="font-['JetBrains_Mono'] text-[10px] uppercase tracking-tighter text-gray-600 hover:text-[#dcb8ff] transition-colors" href="#">API Terms</a>
+    <a class="font-['JetBrains_Mono'] text-[10px] uppercase tracking-tighter text-gray-600 hover:text-[#dcb8ff] transition-colors" href="#">Security</a>
+    <a class="font-['JetBrains_Mono'] text-[10px] uppercase tracking-tighter text-gray-600 hover:text-[#dcb8ff] transition-colors" href="http://127.0.0.1:5501/architecture.html">Architecture</a>
+  </div>
+</footer>
+
+<script>
+  function switchTab(tab) {
+    // Hide all sections
+    document.querySelectorAll('.endpoint-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    // Show selected section
+    document.getElementById('section-' + tab).classList.add('active');
+    document.getElementById('nav-' + tab).classList.add('active');
+  }
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Asteroid Alerting | Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "inverse-primary":"#8422dc","on-tertiary-container":"#ba6500","primary-fixed":"#efdbff","secondary":"#c0c7d4","tertiary":"#ffb77d","on-tertiary-fixed-variant":"#6e3900","surface-tint":"#dcb8ff","surface-container-low":"#191c22","tertiary-container":"#1b0900","tertiary-fixed-dim":"#ffb77d","error":"#ffb4ab","on-tertiary":"#4d2600","on-tertiary-fixed":"#2f1500","primary":"#dcb8ff","surface-variant":"#32353c","on-secondary-fixed-variant":"#404752","error-container":"#93000a","surface-container":"#1d2026","on-primary-fixed-variant":"#6700b5","on-secondary-fixed":"#151c26","surface-container-highest":"#32353c","outline-variant":"#45474b","on-secondary-container":"#b5bcc9","secondary-fixed-dim":"#c0c7d4","inverse-surface":"#e1e2eb","on-primary-fixed":"#2c0051","surface-dim":"#10131a","secondary-container":"#454c57","surface-container-lowest":"#0b0e14","on-surface":"#e1e2eb","on-error-container":"#ffdad6","primary-fixed-dim":"#dcb8ff","on-primary-container":"#a34bfc","on-surface-variant":"#c6c6cb","on-error":"#690005","outline":"#909095","surface":"#10131a","on-primary":"#480081","on-secondary":"#2a313b","surface-bright":"#363940","surface-container-high":"#272a31","on-background":"#e1e2eb","inverse-on-surface":"#2e3037","primary-container":"#190032","tertiary-fixed":"#ffdcc3","background":"#10131a","secondary-fixed":"#dce3f1"
+        },
+        fontFamily: { "headline":["Space Grotesk"], "body":["Inter"], "label":["Space Grotesk"] },
+        borderRadius: {"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"}
+      }
+    }
+  }
+</script>
+<style>
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  .glow-nebula { box-shadow: 0 0 20px rgba(220,184,255,0.1); }
+  .glow-solar  { box-shadow: 0 0 20px rgba(255,183,125,0.1); }
+  .grid-bg { background-image: radial-gradient(circle at 1px 1px, rgba(144,144,149,0.05) 1px, transparent 0); background-size: 24px 24px; }
+  /* spin for loading state */
+  @keyframes _spin { to { transform: rotate(360deg); } }
+  .spin { animation: _spin 0.8s linear infinite; display: inline-block; }
+  /* toast */
+  #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(60px); background:#1d2026; border:1px solid rgba(255,183,125,.3); padding:12px 20px; border-radius:8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#ffb77d; z-index:9999; max-width:520px; width:90%; transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s; opacity:0; pointer-events:none; }
+  #toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+  #toast.err  { border-color:rgba(255,180,171,.4); color:#ffb4ab; }
+  /* service status dot in sidebar */
+  .s-dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
+  .s-dot.ok  { background:#4ade80; }
+  .s-dot.bad { background:#ef4444; }
+  .s-dot.chk { background:#facc15; animation:blink .8s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+</style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30 selection:text-primary">
+
+<!-- ═══ TOP NAV (original, unchanged) ═══ -->
+<nav class="fixed top-0 w-full z-50 bg-[#10131a]/80 backdrop-blur-xl flex justify-between items-center px-8 h-16 w-full max-w-none">
+  <div class="text-xl font-bold text-[#dcb8ff] tracking-widest uppercase font-['Space_Grotesk']">Asteroid Alerting</div>
+  <div class="hidden md:flex items-center gap-8 font-['Space_Grotesk'] tracking-tight">
+    <a class="text-[#dcb8ff] border-b-2 border-[#8A2BE2] pb-1 transition-colors duration-300" href="#">System Overview</a>
+    <a class="text-[#e1e2eb]/60 hover:text-[#dcb8ff] transition-colors duration-300" href="architecture.html">Architecture</a>
+    <a class="text-[#e1e2eb]/60 hover:text-[#dcb8ff] transition-colors duration-300" href="http://127.0.0.1:5501/Doc.html">API Docs</a>
+    <a class="text-[#e1e2eb]/60 hover:text-[#dcb8ff] transition-colors duration-300" href="https://github.com/jasmine-1612/Asteroid-Alert" target="_blank">GitHub</a>
+  </div>
+  <div class="flex items-center gap-4">
+    <!-- Deploy Node → opens notification page -->
+    
+  </div>
+</nav>
+
+<!-- ═══ SIDEBAR (original, unchanged) ═══ -->
+<aside class="fixed left-0 h-full w-64 border-r border-[#32353c]/20 bg-[#10131a] flex flex-col py-6 mt-16 hidden lg:flex">
+  <div class="px-6 mb-8">
+    <h2 class="text-lg font-['Space_Grotesk'] text-[#dcb8ff]">Command Center</h2>
+    <p class="text-[10px] text-on-surface-variant font-mono uppercase tracking-widest">v4.2.0-stable</p>
+  </div>
+  <nav class="flex-1 space-y-1">
+    <a class="flex items-center gap-3 bg-[#32353c] text-[#dcb8ff] rounded-lg mx-2 px-4 py-3 translate-x-1 transition-transform" href="#">
+      <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;">notifications_active</span>
+      <span class="text-sm">Live Alert Feed</span>
+    </a>
+    <a class="flex items-center gap-3 text-[#e1e2eb]/50 hover:text-[#e1e2eb] hover:bg-[#1d2026] px-4 py-3 rounded-md mx-2 transition-all" href="architecture.html">
+      <span class="material-symbols-outlined">insights</span><span class="text-sm">Architecture</span>
+    </a>
+    <a class="flex items-center gap-3 text-[#e1e2eb]/50 hover:text-[#e1e2eb] hover:bg-[#1d2026] px-4 py-3 rounded-md mx-2 transition-all" href="notification.html">
+      <span class="material-symbols-outlined">database</span><span class="text-sm">Orbit Logs</span>
+    </a>
+    <a class="flex items-center gap-3 text-[#e1e2eb]/50 hover:text-[#e1e2eb] hover:bg-[#1d2026] px-4 py-3 rounded-md mx-2 transition-all" href="#">
+      <span class="material-symbols-outlined">shield</span><span class="text-sm">Security</span>
+    </a>
+  </nav>
+  <!-- Live service status — injected into sidebar bottom -->
+  <div class="px-4 mb-4">
+    <div class="bg-surface-container rounded-lg p-3 border border-outline-variant/10 space-y-2">
+      <p class="text-[9px] font-mono uppercase tracking-widest text-on-surface-variant mb-1">Live Status</p>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2"><span class="s-dot chk" id="dot-a"></span><span class="text-[9px] font-mono">Alerting :8080</span></div>
+        <span class="text-[9px] font-mono text-on-surface-variant" id="lbl-a">—</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2"><span class="s-dot chk" id="dot-n"></span><span class="text-[9px] font-mono">Notify :8081</span></div>
+        <span class="text-[9px] font-mono text-on-surface-variant" id="lbl-n">—</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2"><span class="s-dot chk" id="dot-k"></span><span class="text-[9px] font-mono">Kafka :8084</span></div>
+        <span class="text-[9px] font-mono text-on-surface-variant" id="lbl-k">—</span>
+      </div>
+    </div>
+  </div>
+  <div class="px-4">
+    <button class="w-full border border-tertiary/30 text-tertiary py-3 text-xs font-bold uppercase tracking-widest hover:bg-tertiary/10 transition-colors">
+      Emergency Shutdown
+    </button>
+  </div>
+</aside>
+
+<!-- ═══ MAIN CONTENT (original layout, stats wired to API) ═══ -->
+<main class="lg:ml-64 mt-16 min-h-screen grid-bg">
+
+  <!-- Hero Section — original, unchanged -->
+  <section class="relative px-8 pt-20 pb-16 overflow-hidden">
+    <div class="max-w-5xl">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-container text-primary text-xs font-medium mb-6 border border-primary/20">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+        </span>
+        Live NASA Deep Space Link Active
+      </div>
+      <h1 class="font-headline text-5xl md:text-7xl font-bold text-on-surface leading-tight tracking-tighter mb-6">
+        Monitoring <span class="text-primary italic">Near-Earth</span> <br/>Objects
+      </h1>
+      <p class="text-on-surface-variant text-xl max-w-2xl mb-10 leading-relaxed font-body">
+        Real-time ingestion and event-driven analysis of orbital trajectories. Protecting planetary assets through high-fidelity Kafka streaming and NASA NEO integration.
+      </p>
+      <div class="flex flex-wrap gap-4">
+        <!-- Trigger Alert Scan → fires POST to Kafka -->
+        <button onclick="triggerScan()" id="trigger-btn" class="bg-primary text-on-primary font-headline font-bold px-8 py-4 rounded-lg shadow-lg hover:shadow-primary/20 transition-all flex items-center gap-2 group">
+          <span id="trigger-label">Trigger Alert Scan</span>
+          <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" id="trigger-icon">rocket_launch</span>
+        </button>
+        <a href="notification.html" class="bg-surface-container-highest border border-outline-variant/30 text-on-surface font-headline font-bold px-8 py-4 rounded-lg hover:bg-surface-bright transition-all">
+          View Notifications
+        </a>
+      </div>
+    </div>
+    <div class="absolute right-0 top-0 -z-10 w-1/3 h-full opacity-40 blur-3xl pointer-events-none">
+      <div class="w-full h-full bg-primary/20 rounded-full animate-pulse"></div>
+    </div>
+  </section>
+
+  <!-- Stats Dashboard — real data from API -->
+  <section class="px-8 mb-20">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="bg-surface-container-high p-6 rounded-xl border border-outline-variant/10 glow-nebula">
+        <div class="flex justify-between items-start mb-4">
+          <p class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Total Notifications</p>
+          <span class="material-symbols-outlined text-primary text-lg">schedule</span>
+        </div>
+        <p class="font-headline text-2xl font-bold" id="stat-total">—</p>
+      </div>
+      <div class="bg-surface-container-high p-6 rounded-xl border border-outline-variant/10">
+        <div class="flex justify-between items-start mb-4">
+          <p class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Emails Sent</p>
+          <span class="material-symbols-outlined text-tertiary text-lg">mark_email_read</span>
+        </div>
+        <p class="font-headline text-2xl font-bold" id="stat-sent">—</p>
+      </div>
+      <div class="bg-surface-container-high p-6 rounded-xl border border-outline-variant/10">
+        <div class="flex justify-between items-start mb-4">
+          <p class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Pending Emails</p>
+          <span class="material-symbols-outlined text-primary text-lg">pending</span>
+        </div>
+        <p class="font-headline text-2xl font-bold" id="stat-pending">—</p>
+      </div>
+      <div class="bg-surface-container-high p-6 rounded-xl border border-outline-variant/10">
+        <div class="flex justify-between items-start mb-4">
+          <p class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Service Health</p>
+          <span class="material-symbols-outlined text-tertiary text-lg">vital_signs</span>
+        </div>
+        <p class="font-headline text-2xl font-bold" id="stat-health">—</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Notification Feed — NEW section, before architecture -->
+  <section class="px-8 mb-20">
+    <div class="bg-surface-container rounded-2xl border border-outline-variant/20 overflow-hidden">
+      <div class="px-8 py-4 bg-surface-container-low flex items-center justify-between border-b border-outline-variant/10">
+        <div class="flex items-center gap-3">
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+          </span>
+          <h3 class="font-headline font-bold text-sm uppercase tracking-wider">Live Notification Feed</h3>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-[10px] font-mono text-on-surface-variant">localhost:8081/api/v1/notifications</span>
+          <button onclick="loadFeed()" class="text-on-surface-variant hover:text-primary transition-colors">
+            <span class="material-symbols-outlined text-sm">refresh</span>
+          </button>
+          <a href="notification.html" class="text-[10px] font-mono text-primary hover:underline">View all →</a>
+        </div>
+      </div>
+      <div id="live-feed">
+        <div class="px-8 py-10 flex items-center justify-center gap-3 text-on-surface-variant">
+          <span class="material-symbols-outlined text-primary spin">autorenew</span>
+          <span class="font-mono text-sm">Connecting to notification service…</span>
+        </div>
+      </div>
+      <div class="px-8 py-3 bg-surface-container-low border-t border-outline-variant/10">
+        <p class="text-[10px] font-mono text-on-surface-variant" id="feed-footer">Fetching from MySQL…</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture Visualization — original, unchanged -->
+  <section class="px-8 mb-20">
+    <div class="bg-surface-container p-10 rounded-2xl border border-outline-variant/20 relative overflow-hidden">
+      <div class="mb-12">
+        <h3 class="font-headline text-3xl font-bold mb-2">Event-Driven Architecture</h3>
+        <p class="text-on-surface-variant">Low-latency data pipeline from detection to notification.</p>
+      </div>
+      <div class="flex flex-col md:flex-row items-center justify-between gap-8 relative py-8">
+        <div class="flex flex-col items-center gap-4 z-10 w-32">
+          <div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center border border-primary/20">
+            <span class="material-symbols-outlined text-primary text-3xl">cloud_download</span>
+          </div>
+          <span class="text-[10px] font-mono uppercase font-bold text-center">NASA NEO API</span>
+        </div>
+        <div class="hidden md:block flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent"></div>
+        <div class="flex flex-col items-center gap-4 z-10 w-32">
+          <div class="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/40" id="arch-alerting">
+            <span class="material-symbols-outlined text-primary text-3xl">settings_input_component</span>
+          </div>
+          <span class="text-[10px] font-mono uppercase font-bold text-center">Alerting Service</span>
+        </div>
+        <div class="hidden md:block flex-1 h-px bg-gradient-to-r from-transparent via-tertiary/50 to-transparent"></div>
+        <div class="flex flex-col items-center gap-4 z-10 w-32">
+          <div class="w-20 h-20 rounded-xl bg-surface-container-highest flex flex-col items-center justify-center border-2 border-tertiary/40 glow-solar" id="arch-kafka">
+            <span class="material-symbols-outlined text-tertiary text-3xl">hub</span>
+            <span class="text-[9px] font-bold mt-1">KAFKA</span>
+          </div>
+        </div>
+        <div class="hidden md:block flex-1 h-px bg-gradient-to-r from-transparent via-tertiary/50 to-transparent"></div>
+        <div class="flex flex-col items-center gap-4 z-10 w-32">
+          <div class="w-16 h-16 rounded-lg bg-surface-container-highest flex items-center justify-center border border-outline-variant/40" id="arch-notify">
+            <span class="material-symbols-outlined text-on-surface text-3xl">mail</span>
+          </div>
+          <span class="text-[10px] font-mono uppercase font-bold text-center">Notify Service</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack & Features — original, unchanged -->
+  <section class="px-8 mb-20">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="lg:col-span-1 bg-surface-container-high p-8 rounded-2xl border border-outline-variant/10">
+        <h4 class="font-headline text-xl font-bold mb-6">Built for Scale</h4>
+        <div class="flex flex-wrap gap-3">
+          <div class="flex items-center gap-2 bg-surface-container px-3 py-2 rounded-lg border border-outline-variant/20">
+            <img alt="Java 21" class="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBqZPLQAHP1PYtLLdq0HLLI3x_108adr8Wa9oEaAsUFMYfk5eY4ATiPrjb_h-fpkRbmwfeJKBJFvbAyRFILx4zz8DkL9m06hL-RRGCL62mAkLED9AlbWD6pNmrm0rIZuPf2HzLXkSMqMppV2hkSrqLWjW_TqW_qzijmP5Pdf14g3KSyMAXwDy9gReKy6H3W4HpA_xpPX2_u5Y_T5lGAoFum9_jOcikNpBiRMeGPZkoNajz3WnylwG9IxVK17mDv1nXNJkCyb1NRics"/>
+            <span class="text-xs font-mono">Java 21</span>
+          </div>
+          <div class="flex items-center gap-2 bg-surface-container px-3 py-2 rounded-lg border border-outline-variant/20">
+            <img alt="Spring Boot" class="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBavLhigUCq9bezHs-07nGQS9jb6h_f9xmLwcudXbuDHh-1OIrrGHrPBMfgHbaIAHNl0G2nw64gteQ3j2fIHtl9n76-NOCGY8IRMp7uqLBGX4v4LzqU1uPqCcoNMjVUThq9a9tfTyY0wQC42nAg5qJflu_wfvFt9jGVGpdHevfTB-gHoIs2Quyd_xpb4-4ANN7cpUWWDeR7CyWhdjz64xKMZzoyWVDiepbwk8XA5RLq6SsFnC21Cq7xN7DrBjpYxSRbif8gNnGBIB8"/>
+            <span class="text-xs font-mono">Spring Boot</span>
+          </div>
+          <div class="flex items-center gap-2 bg-surface-container px-3 py-2 rounded-lg border border-outline-variant/20">
+            <img alt="Kafka" class="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAne1vizuFFw8rWQ3dmUZP18cagNubtQVXCR6n9dZhCIwyi9xTwpji6vFOf2fXJSdtBBSVzL9Dt_XVzjwBbTzX0d9ybvPzcjkfLEHuVRYPzrgZzDXO5ZZyt5kT70iJKLRu3Yck8bZVq-_2QCBMQ9qYYKIKZBA2U5iaVHyjY3wtwBexeVvOb5uBsfOQ1Zi9xzuc8mLfh3fuwTrZO94S5bqMAzxO3R2VQ43VUUpEyUP0zI0LVLrfFPxnPHNRYBoc9S8e-vk2EQz7Hvsk"/>
+            <span class="text-xs font-mono">Kafka</span>
+          </div>
+          <div class="flex items-center gap-2 bg-surface-container px-3 py-2 rounded-lg border border-outline-variant/20">
+            <img alt="Docker" class="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAylv4V9j6u64V136OrZBjalyZRaqdWF0RqzHowdum0Xgd1RFVL-GZerXYxZob-JUfe-1ccB7neU3ZENrWnLGpIPbEdIZPu9Gs0DGPR2sOh_y9r6v8QyJ0EXiiswG7p5si9ELRsjsvcqxWz3ER9mZIQNdI-iLIM2aMCiRhYTbJb9dOfdPgN0vBCk9cFn8F_kzLQo09P4f5_zcpa0V94DGHmWvEOwOqKNv6ySf480plNs_6QaWNW99K2JkyHcieL0fVkZXtzHYwpMec"/>
+            <span class="text-xs font-mono">Docker</span>
+          </div>
+          <div class="flex items-center gap-2 bg-surface-container px-3 py-2 rounded-lg border border-outline-variant/20">
+            <img alt="MySQL" class="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6fNaNTl1XJrtvni8v6A6-MwZpEXB6KwW4xGKMBPkKhLNQLFz6mlB4gheGj4S2kGZEO_Rbnutqe4awsy57Lw5hz_WIah4O1nrhqFFRskN3QwQbCDAuAY-xnRR1ctCbfK7Injr3UQ9uX3eVGbxB_XZqk6m7aTn7tafzBT5JtBnMZqRAd6hjXCkqK-6bwbhr3INA7qdq0NBS-ZVL2LGaDcTOr_1FD5RdF-gsOI1CZlKt8z8yIX2RmU1zONmzjTn0Q8XWR_lcgWHQ-1U"/>
+            <span class="text-xs font-mono">MySQL 8.0</span>
+          </div>
+        </div>
+        <div class="mt-8 pt-8 border-t border-outline-variant/10">
+          <p class="text-xs text-on-surface-variant leading-relaxed">Our stack leverages the latest JVM features and reactive patterns to ensure zero-loss ingestion during peak celestial activity periods.</p>
+        </div>
+      </div>
+      <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-surface-container-high p-8 rounded-2xl border border-outline-variant/10 hover:bg-surface-bright transition-all">
+          <span class="material-symbols-outlined text-primary mb-4 block" style="font-variation-settings:'FILL' 1;">star</span>
+          <h5 class="font-headline text-lg font-bold mb-3">NASA NEO Integration</h5>
+          <p class="text-sm text-on-surface-variant leading-relaxed">Direct synchronization with CNEOS and JPL Horizons datasets for millimeter-accurate positioning.</p>
+        </div>
+        <div class="bg-surface-container-high p-8 rounded-2xl border border-outline-variant/10 hover:bg-surface-bright transition-all">
+          <span class="material-symbols-outlined text-tertiary mb-4 block" style="font-variation-settings:'FILL' 1;">stream</span>
+          <h5 class="font-headline text-lg font-bold mb-3">Kafka Streaming</h5>
+          <p class="text-sm text-on-surface-variant leading-relaxed">Distributed log processing ensures high availability and reliable event sequencing for all alerts.</p>
+        </div>
+        <div class="bg-surface-container-high p-8 rounded-2xl border border-outline-variant/10 hover:bg-surface-bright transition-all md:col-span-2">
+          <div class="flex flex-col md:flex-row md:items-center gap-6">
+            <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings:'FILL' 1;">forward_to_inbox</span>
+            <div>
+              <h5 class="font-headline text-lg font-bold mb-3">Automated SMTP Alerts</h5>
+              <p class="text-sm text-on-surface-variant leading-relaxed">Configurable threshold triggers. Receive instant satellite-priority notifications via secure SMTP relay when an object enters the detection radius.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer — real service status -->
+  <footer class="bg-[#10131a] w-full py-4 border-t border-[#32353c]/10 flex flex-col md:flex-row justify-between items-center px-12 mt-auto">
+    <div class="text-[#ffb77d] font-bold font-['JetBrains_Mono'] text-[10px] uppercase tracking-tighter mb-4 md:mb-0" id="footer-status">
+      © 2024 Asteroid Alerting &amp; Notification System. Checking service status…
+    </div>
+    <div class="flex gap-6">
+      <a class="text-[#e1e2eb]/40 hover:text-[#ffb77d] transition-opacity font-['JetBrains_Mono'] text-[10px] uppercase" href="http://localhost:8084" target="_blank">Kafka UI ↗</a>
+      <a class="text-[#e1e2eb]/40 hover:text-[#ffb77d] transition-opacity font-['JetBrains_Mono'] text-[10px] uppercase" href="notification.html">Threat Log</a>
+    </div>
+  </footer>
+</main>
+
+<!-- Floating badge — original -->
+<div class="fixed bottom-8 right-8 z-40 hidden md:block">
+  <div class="bg-surface-container-highest/80 backdrop-blur-md p-4 rounded-xl border border-primary/20 flex items-center gap-4">
+    <div class="relative h-3 w-3">
+      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+      <span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+    </div>
+    <span class="text-[10px] font-mono font-bold text-primary tracking-widest uppercase" id="badge-txt">Checking…</span>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────
+const A  = 'http://localhost:8080';   // alerting service
+const N  = 'http://localhost:8081';   // notification service
+const KU = 'http://localhost:8084';   // kafka ui
+const NOTIFS = N + '/api/v1/notifications';
+const TRIGGER = A + '/api/v1/asteroid-alerting/alert';
+
+// ─── FETCH WITH TIMEOUT ───────────────────────────────────────
+async function ft(url, opts = {}, ms = 5000) {
+  const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+  try { const r = await fetch(url, { ...opts, signal: c.signal }); clearTimeout(t); return r; }
+  catch(e) { clearTimeout(t); throw e; }
+}
+
+// ─── TOAST ───────────────────────────────────────────────────
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = err ? 'err' : '';
+  el.setAttribute('id', 'toast');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show', 'err'), 4500);
+}
+
+// ─── LocalDate from Spring: may be [2024,1,14] or "2024-01-14"
+function fmtDate(v) {
+  if (!v) return '—';
+  if (Array.isArray(v)) return v[0] + '-' + String(v[1]).padStart(2,'0') + '-' + String(v[2]).padStart(2,'0');
+  return String(v);
+}
+
+// ─── SERVICE HEALTH ───────────────────────────────────────────
+function sdot(id, s) { const e = document.getElementById(id); if (e) e.className = 's-dot ' + s; }
+function slbl(id, t, c) { const e = document.getElementById(id); if (!e) return; e.textContent = t; e.style.color = c || ''; }
+function archBorder(id, ok) {
+  const e = document.getElementById(id);
+  if (e) e.style.borderColor = ok ? 'rgba(74,222,128,.5)' : 'rgba(239,68,68,.4)';
+}
+
+let svc = { a: false, n: false, k: false };
+
+async function checkHealth() {
+  // Alerting
+  sdot('dot-a','chk');
+  try {
+    let up = false;
+    try {
+      const r = await ft(A + '/actuator/health', {}, 4000);
+      if (r.ok) { const j = await r.json(); up = j.status === 'UP'; }
+      else { const r2 = await ft(A + '/api/v1/asteroid-alerting/alert', {method:'OPTIONS'}, 3000); up = r2.status < 500; }
+    } catch { up = false; }
+    svc.a = up;
+    sdot('dot-a', up ? 'ok' : 'bad');
+    slbl('lbl-a', up ? 'UP' : 'DOWN', up ? '#4ade80' : '#ef4444');
+    archBorder('arch-alerting', up);
+    document.getElementById('stat-health').innerHTML = up
+      ? '<span style="color:#4ade80">UP</span>'
+      : '<span style="color:#ef4444">DOWN</span>';
+  } catch {
+    svc.a = false; sdot('dot-a','bad'); slbl('lbl-a','OFFLINE','#ef4444');
+    archBorder('arch-alerting', false);
+    document.getElementById('stat-health').innerHTML = '<span style="color:#ef4444;font-size:13px">Offline</span>';
+  }
+
+  // Notify — with fallback if actuator not present
+  sdot('dot-n','chk');
+
+try {
+  const r = await ft(NOTIFS, {}, 4000); // correct service
+
+  svc.n = r.ok;
+
+  sdot('dot-n', svc.n ? 'ok' : 'bad');
+  slbl('lbl-n', svc.n ? 'UP' : 'DOWN', svc.n ? '#4ade80' : '#ef4444');
+  archBorder('arch-notify', svc.n);
+
+} catch {
+  svc.n = false;
+  sdot('dot-n','bad');
+  slbl('lbl-n','OFFLINE','#ef4444');
+  archBorder('arch-notify', false);
+}
+  // Kafka UI
+  sdot('dot-k','chk');
+  try {
+    await ft(KU, { mode: 'no-cors' }, 3000);
+    svc.k = true; sdot('dot-k','ok'); slbl('lbl-k','UP','#4ade80');
+    archBorder('arch-kafka', true);
+  } catch {
+    svc.k = false; sdot('dot-k','bad'); slbl('lbl-k','OFFLINE','#ef4444');
+    archBorder('arch-kafka', false);
+  }
+
+  // Badge + footer
+  const all = svc.a && svc.n;
+  document.getElementById('badge-txt').textContent = all ? 'System Stabilized' : (!svc.a && !svc.n) ? 'Services Offline' : 'Partial Degradation';
+  document.getElementById('footer-status').textContent =
+    '© 2024 Asteroid Alerting · Alerting: ' + (svc.a?'ONLINE':'OFFLINE') +
+    ' | Notify: ' + (svc.n?'ONLINE':'OFFLINE') +
+    ' | Kafka: ' + (svc.k?'ONLINE':'OFFLINE');
+
+  if (svc.n) { loadFeed(); loadStats(); }
+  else { showFeedOffline(); }
+}
+
+// ─── LOAD NOTIFICATION FEED ───────────────────────────────────
+async function loadFeed() {
+  if (!svc.n) { showFeedOffline(); return; }
+  try {
+    const r = await ft(NOTIFS, {}, 8000);
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' — add @CrossOrigin(origins="*") to NotificationController and restart');
+    const data = await r.json();
+    const list = Array.isArray(data) ? data : (data.content ?? data.data ?? []);
+    const total = data.totalElements ?? list.length;
+
+    if (list.length === 0) {
+      document.getElementById('live-feed').innerHTML =
+        '<div class="px-8 py-10 text-center">' +
+        '<p class="font-mono text-on-surface-variant text-sm">No notifications in database yet.</p>' +
+        '<p class="font-mono text-on-surface-variant/60 text-xs mt-2">Click <strong style="color:#dcb8ff">Trigger Alert Scan</strong> to fetch from NASA and publish to Kafka.</p>' +
+        '</div>';
+      document.getElementById('feed-footer').textContent = '0 records in MySQL · trigger a scan to populate';
+      document.getElementById('stat-total').textContent = '0';
+      document.getElementById('stat-sent').textContent = '0';
+      document.getElementById('stat-pending').textContent = '0';
+      return;
+    }
+
+    const feed = document.getElementById('live-feed');
+    feed.innerHTML = '';
+    list.slice(0, 8).forEach(n => {
+      const name    = n.asteroidName ?? 'Unknown';
+      const sent    = n.emailSent === true;
+      const approach = fmtDate(n.closeApproachDate);
+      const miss    = n.missDistanceKilometers != null ? Number(n.missDistanceKilometers).toLocaleString() + ' km' : '—';
+      const diam    = n.estimatedDiameterAvgMeters != null ? Number(n.estimatedDiameterAvgMeters).toFixed(1) + ' m' : '—';
+      const dotColor = sent ? '#dcb8ff' : '#909095';
+      const badgeStyle = sent
+        ? 'background:rgba(220,184,255,.1);color:#dcb8ff;border:1px solid rgba(220,184,255,.2)'
+        : 'background:rgba(144,144,149,.1);color:#909095;border:1px solid rgba(144,144,149,.2)';
+
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:14px 32px;display:flex;align-items:center;gap:16px;border-bottom:1px solid rgba(69,71,75,.2);transition:background .2s;cursor:default';
+      row.onmouseover = () => row.style.background = 'rgba(50,53,60,.3)';
+      row.onmouseout  = () => row.style.background = '';
+      row.innerHTML =
+        `<div style="width:8px;height:8px;border-radius:50%;background:${dotColor};flex-shrink:0"></div>` +
+        `<div style="flex:1;min-width:0">` +
+          `<p style="font-family:monospace;font-size:13px;font-weight:bold;color:#e1e2eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</p>` +
+          `<p style="font-family:monospace;font-size:10px;color:#c6c6cb;margin-top:2px">Approach: ${approach} · Miss: ${miss} · Ø ${diam}</p>` +
+        `</div>` +
+        `<span style="padding:3px 10px;border-radius:3px;font-family:monospace;font-size:10px;flex-shrink:0;${badgeStyle}">${sent ? 'EMAIL SENT' : 'PENDING'}</span>`;
+      feed.appendChild(row);
+    });
+
+    const sentCount = list.filter(n => n.emailSent === true).length;
+    document.getElementById('feed-footer').textContent =
+      `Showing ${Math.min(list.length, 8)} of ${total} · ${sentCount} emails sent · from MySQL`;
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-sent').textContent = sentCount;
+    document.getElementById('stat-pending').textContent = total - sentCount;
+
+  } catch(err) {
+    showFeedOffline(err.message);
+  }
+}
+
+async function loadStats() {
+  if (!svc.n) return;
+  try {
+    const r = await ft(NOTIFS, {}, 5000);
+    if (!r.ok) return;
+    const data = await r.json();
+    const list = Array.isArray(data) ? data : (data.content ?? data.data ?? []);
+    const total = data.totalElements ?? list.length;
+    const sent  = list.filter(n => n.emailSent === true).length;
+    document.getElementById('stat-total').textContent   = total;
+    document.getElementById('stat-sent').textContent    = sent;
+    document.getElementById('stat-pending').textContent = total - sent;
+  } catch {}
+}
+
+function showFeedOffline(msg) {
+  document.getElementById('live-feed').innerHTML =
+    '<div class="px-8 py-10 flex flex-col items-center gap-3 text-center">' +
+    '<span class="material-symbols-outlined text-error text-3xl">cloud_off</span>' +
+    '<p class="font-mono text-sm" style="color:#ef4444">Notification service unreachable</p>' +
+    (msg ? '<p class="font-mono text-xs text-on-surface-variant/70 max-w-sm">' + msg + '</p>' : '') +
+    '<p class="font-mono text-xs text-on-surface-variant/50">Fix: add CorsConfig.java to notification-service and restart</p>' +
+    '<button onclick="checkHealth()" class="mt-2 px-4 py-2 bg-surface-container border border-outline-variant/20 text-xs font-mono rounded hover:bg-surface-bright">Retry</button>' +
+    '</div>';
+  document.getElementById('feed-footer').textContent = 'Service offline — no data';
+}
+
+// ─── TRIGGER SCAN ─────────────────────────────────────────────
+async function triggerScan() {
+  
+  const btn  = document.getElementById('trigger-btn');
+  const lbl  = document.getElementById('trigger-label');
+  const icon = document.getElementById('trigger-icon');
+  btn.disabled = true; lbl.textContent = 'Scanning…'; icon.classList.add('spin'); icon.textContent = 'autorenew';
+  const t0 = Date.now();
+  try {
+    const r = await ft(TRIGGER, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' }, 15000);
+    const ms = Date.now() - t0;
+    if (r.ok) {
+      toast('✓ ' + ms + 'ms · NASA data fetched · Kafka event published');
+      setTimeout(() => { loadFeed(); loadStats(); }, 4000);
+    } else {
+      const body = await r.text().catch(() => '');
+      toast('✕ HTTP ' + r.status + ' · ' + body.slice(0, 80), true);
+    }
+  } catch(err) {
+    toast('✕ ' + err.message + ' — CORS configured on alerting-service?', true);
+    checkHealth();
+  } finally {
+    btn.disabled = false; lbl.textContent = 'Trigger Alert Scan';
+    icon.classList.remove('spin'); icon.textContent = 'rocket_launch';
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+checkHealth();
+setInterval(checkHealth, 30000);
+setInterval(() => { if (svc.n) loadFeed(); }, 30000);
+</script>
+</body></html>

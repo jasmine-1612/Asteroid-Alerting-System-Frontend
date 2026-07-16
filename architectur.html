@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ORBITAL_ARCH | System Architecture</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "surface": "#10131a", "surface-container": "#1d2026",
+          "surface-container-high": "#272a31", "surface-container-highest": "#32353c",
+          "surface-container-low": "#191c22", "outline-variant": "#45474b",
+          "on-surface": "#e1e2eb", "on-surface-variant": "#c6c6cb",
+          "primary": "#dcb8ff", "on-primary": "#480081", "primary-container": "#190032",
+          "tertiary": "#ffb77d", "on-tertiary": "#4d2600",
+          "secondary": "#c0c7d4", "error": "#ffb4ab", "error-container": "#93000a",
+        },
+        fontFamily: { "headline": ["Space Grotesk"], "mono": ["JetBrains Mono"] },
+      },
+    },
+  }
+</script>
+<style>
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+  body { background-color: #10131a; color: #e1e2eb; font-family: 'Space Grotesk', sans-serif; }
+  .grid-bg { background-image: radial-gradient(circle, rgba(144,144,149,0.05) 1px, transparent 1px); background-size: 24px 24px; }
+
+  .svc-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; position: relative; }
+  .svc-dot.online  { background: #4ade80; }
+  .svc-dot.offline { background: #ef4444; }
+  .svc-dot.checking { background: #facc15; animation: blink-d 1s ease-in-out infinite; }
+  .svc-dot.online::after { content:''; position:absolute; inset:0; border-radius:50%; background:#4ade80; opacity:0.4; animation:pulse-s 2s infinite; }
+  @keyframes pulse-s  { 0%{transform:scale(1);opacity:.4} 100%{transform:scale(2.8);opacity:0} }
+  @keyframes blink-d  { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+  .arch-card { background: #1d2026; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s; }
+  .arch-card:hover { transform: translateY(-3px); box-shadow: 0 16px 48px rgba(0,0,0,0.5); }
+
+  .dash-line { stroke-dasharray: 7 4; animation: dash-move 1.8s linear infinite; }
+  @keyframes dash-move { to { stroke-dashoffset: -22; } }
+
+  .node-online  { border-top: 2px solid rgba(74,222,128,0.6) !important; }
+  .node-offline { border-top: 2px solid rgba(239,68,68,0.5) !important; }
+  .node-checking{ border-top: 2px solid rgba(250,204,21,0.45) !important; }
+  .node-neutral { border-top: 2px solid rgba(144,144,149,0.3) !important; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 0.7s linear infinite; display: inline-block; }
+
+  .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; }
+  .pill-online  { background: rgba(74,222,128,0.1);  border: 1px solid rgba(74,222,128,0.25);  color: #4ade80; }
+  .pill-offline { background: rgba(239,68,68,0.1);   border: 1px solid rgba(239,68,68,0.25);   color: #ef4444; }
+  .pill-checking{ background: rgba(250,204,21,0.1);  border: 1px solid rgba(250,204,21,0.25);  color: #facc15; }
+  .pill-neutral { background: rgba(144,144,149,0.08); border: 1px solid rgba(144,144,149,0.2); color: #909095; }
+</style>
+</head>
+<body class="grid-bg min-h-screen">
+
+<!-- NAV -->
+<header class="fixed top-0 w-full z-50 h-14 flex items-center justify-between px-6 bg-[#10131a]/90 backdrop-blur-xl border-b border-white/5">
+  <div class="flex items-center gap-6">
+    <span class="text-base font-bold tracking-widest text-[#dcb8ff] uppercase">ORBITAL_ARCH</span>
+    <a href="dashboard.html" class="text-[11px] font-mono text-on-surface-variant hover:text-primary transition-colors uppercase tracking-widest">← Dashboard</a>
+  </div>
+  <button onclick="checkAll()" class="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors text-xs font-mono">
+    <span class="material-symbols-outlined text-base" id="refresh-icon">refresh</span>
+    Refresh
+  </button>
+</header>
+
+<!-- MAIN -->
+<main class="pt-14 min-h-screen flex flex-col items-center justify-center px-8 py-16">
+  <div class="w-full max-w-5xl space-y-10">
+
+    <!-- Title -->
+    <div class="text-center space-y-2">
+      <p class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Event-driven · Spring Boot + Kafka + Docker</p>
+      <h1 class="text-3xl font-bold tracking-tight text-on-surface">Asteroid Alerting System</h1>
+      <p class="text-sm text-on-surface-variant font-mono">System Architecture</p>
+    </div>
+
+    <!-- Status bar -->
+    <div class="flex items-center justify-center gap-6 flex-wrap">
+      <div class="flex items-center gap-2 text-xs font-mono">
+        <span class="svc-dot checking" id="dot-alerting"></span>
+        <span class="text-on-surface-variant">Alerting</span>
+        <span class="status-pill pill-checking" id="pill-alerting">CHECKING</span>
+      </div>
+      <div class="h-4 w-px bg-white/10"></div>
+      <div class="flex items-center gap-2 text-xs font-mono">
+        <span class="svc-dot checking" id="dot-notify"></span>
+        <span class="text-on-surface-variant">Notification</span>
+        <span class="status-pill pill-checking" id="pill-notify">CHECKING</span>
+      </div>
+      <div class="h-4 w-px bg-white/10"></div>
+      <div class="flex items-center gap-2 text-xs font-mono">
+        <span class="svc-dot checking" id="dot-kafka"></span>
+        <span class="text-on-surface-variant">Kafka</span>
+        <span class="status-pill pill-checking" id="pill-kafka">INFERRED</span>
+      </div>
+      <div class="h-4 w-px bg-white/10"></div>
+      <div class="flex items-center gap-2 text-xs font-mono">
+        <span class="svc-dot checking" id="dot-mysql"></span>
+        <span class="text-on-surface-variant">MySQL</span>
+        <span class="status-pill pill-checking" id="pill-mysql">INFERRED</span>
+      </div>
+      <div class="h-4 w-px bg-white/10"></div>
+      <a href="http://localhost:8084" target="_blank" class="flex items-center gap-1.5 text-xs font-mono text-on-surface-variant hover:text-primary transition-colors">
+        <span class="material-symbols-outlined text-sm">open_in_new</span>
+        Kafka UI :8084
+      </a>
+    </div>
+
+    <!-- Architecture diagram -->
+    <div class="relative bg-surface-container-low/50 rounded-2xl p-10 border border-white/5 overflow-hidden">
+
+      <!-- SVG connector lines -->
+      <svg class="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
+        <defs>
+          <marker id="arr-p" markerWidth="8" markerHeight="8" refX="4" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="rgba(220,184,255,0.35)"/>
+          </marker>
+          <marker id="arr-t" markerWidth="8" markerHeight="8" refX="4" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,183,125,0.35)"/>
+          </marker>
+        </defs>
+        <!-- NASA → Alerting -->
+        <line x1="18%" y1="42%" x2="31%" y2="42%" stroke="rgba(220,184,255,0.2)" stroke-width="1.5" class="dash-line" marker-end="url(#arr-p)"/>
+        <!-- Alerting → Kafka -->
+        <line x1="47%" y1="42%" x2="54%" y2="42%" stroke="rgba(220,184,255,0.2)" stroke-width="1.5" class="dash-line" marker-end="url(#arr-p)"/>
+        <!-- Kafka → Notify -->
+        <line x1="69%" y1="42%" x2="76%" y2="42%" stroke="rgba(255,183,125,0.2)" stroke-width="1.5" class="dash-line" marker-end="url(#arr-t)"/>
+      </svg>
+
+      <div class="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-6">
+
+        <!-- NASA NEO API -->
+        <div class="arch-card node-neutral w-48 p-5 flex-shrink-0">
+          <div class="flex justify-between items-start mb-4">
+            <span class="text-[9px] font-mono text-on-surface-variant uppercase tracking-widest">External</span>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-surface-container-highest flex items-center justify-center mb-3">
+            <span class="material-symbols-outlined text-on-surface-variant text-lg">cloud_download</span>
+          </div>
+          <p class="text-sm font-bold mb-1">NASA NEO API</p>
+          <p class="text-[10px] text-on-surface-variant font-mono mb-3">api.nasa.gov</p>
+          <div class="text-[9px] font-mono bg-[#0b0e14] px-2 py-1.5 rounded">
+            <span class="text-green-400">GET</span> /neo/rest/v1/feed
+          </div>
+        </div>
+
+        <span class="material-symbols-outlined text-primary/20 hidden lg:block text-2xl">chevron_right</span>
+
+        <!-- Alerting Service -->
+        <div class="arch-card node-checking w-48 p-5 flex-shrink-0" id="node-alerting">
+          <div class="flex justify-between items-start mb-4">
+            <span class="text-[9px] font-mono text-primary uppercase tracking-widest">:8080</span>
+            <span class="svc-dot checking" id="dot2-alerting"></span>
+          </div>
+          <div class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-3">
+            <span class="material-symbols-outlined text-primary text-lg">settings_input_component</span>
+          </div>
+          <p class="text-sm font-bold mb-1">Alerting Service</p>
+          <p class="text-[10px] text-on-surface-variant font-mono mb-3">Java 21 · Spring Boot</p>
+          <p class="text-[9px] font-mono text-on-surface-variant" id="label-alerting">Checking…</p>
+        </div>
+
+        <span class="material-symbols-outlined text-tertiary/20 hidden lg:block text-2xl">double_arrow</span>
+
+        <!-- Kafka -->
+        <div class="arch-card node-checking w-48 p-5 flex-shrink-0 relative" id="node-kafka">
+          <div class="absolute -top-3 left-4">
+            <span class="text-[9px] font-mono bg-tertiary text-on-tertiary px-2 py-0.5 rounded font-bold">DOCKER</span>
+          </div>
+          <div class="flex justify-between items-start mb-4 mt-1">
+            <span class="text-[9px] font-mono text-tertiary uppercase tracking-widest">:9092</span>
+            <span class="svc-dot checking" id="dot2-kafka"></span>
+          </div>
+          <div class="w-9 h-9 rounded-xl bg-tertiary/10 border border-tertiary/20 flex items-center justify-center mb-3">
+            <span class="material-symbols-outlined text-tertiary text-lg">hub</span>
+          </div>
+          <p class="text-sm font-bold mb-1">Apache Kafka</p>
+          <p class="text-[10px] text-on-surface-variant font-mono mb-1">Topic: asteroidalerting</p>
+          <p class="text-[9px] font-mono text-on-surface-variant" id="label-kafka">Inferred from :8080</p>
+        </div>
+
+        <span class="material-symbols-outlined text-primary/20 hidden lg:block text-2xl">chevron_right</span>
+
+        <!-- Notify Service -->
+        <div class="arch-card node-checking w-48 p-5 flex-shrink-0" id="node-notify">
+          <div class="flex justify-between items-start mb-4">
+            <span class="text-[9px] font-mono text-primary uppercase tracking-widest">:8081</span>
+            <span class="svc-dot checking" id="dot2-notify"></span>
+          </div>
+          <div class="w-9 h-9 rounded-lg bg-surface-container-highest flex items-center justify-center mb-3">
+            <span class="material-symbols-outlined text-on-surface text-lg">mail</span>
+          </div>
+          <p class="text-sm font-bold mb-1">Notify Service</p>
+          <p class="text-[10px] text-on-surface-variant font-mono mb-3">Java 21 · Spring Boot</p>
+          <p class="text-[9px] font-mono text-on-surface-variant" id="label-notify">Checking…</p>
+        </div>
+
+      </div>
+
+      <!-- Bottom row: MySQL + Email -->
+      <div class="relative z-10 flex justify-end gap-4 mt-8">
+
+        <!-- MySQL -->
+        <div class="arch-card node-checking w-48 p-4 flex items-center gap-3 flex-shrink-0" id="node-mysql">
+          <div class="w-9 h-9 rounded-lg bg-surface-container-highest flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-secondary text-lg">database</span>
+          </div>
+          <div>
+            <p class="text-sm font-bold">MySQL 8</p>
+            <p class="text-[9px] font-mono text-on-surface-variant">:3307 · persistence</p>
+            <p class="text-[9px] font-mono mt-1" id="label-mysql">Inferred from :8081</p>
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="arch-card node-neutral w-48 p-4 flex items-center gap-3 flex-shrink-0">
+          <div class="w-9 h-9 rounded-lg bg-surface-container-highest flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-primary text-lg">mail</span>
+          </div>
+          <div>
+            <p class="text-sm font-bold">Email / SMTP</p>
+            <p class="text-[9px] font-mono text-on-surface-variant">MailTrap</p>
+            <p class="text-[9px] font-mono text-on-surface-variant/50 mt-1">application.properties</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Inference note -->
+    <p class="text-center text-[10px] font-mono text-on-surface-variant/40">
+      Kafka and MySQL status are inferred — if Spring Boot started, they connected successfully at startup.
+      &nbsp;·&nbsp;
+      <a href="http://localhost:8084" target="_blank" class="hover:text-primary transition-colors">Verify Kafka directly in Kafka UI ↗</a>
+    </p>
+
+  </div>
+</main>
+
+<script>
+// ── State ────────────────────────────────────────────────────
+// Never mark a service offline from a single failed probe.
+// Chrome PNA sometimes blocks WebSocket instantly even when the
+// port is open — one failure is unreliable.
+// Rule: only flip to offline after 3 consecutive failures.
+const failures = { alerting: 0, notify: 0 };
+const OFFLINE_THRESHOLD = 3;
+
+// ── Restore saved state immediately on load (no flicker) ─────
+function restoreState() {
+  const saved = localStorage.getItem('orbital_status');
+  if (saved) applyState(JSON.parse(saved));
+}
+
+// ── WebSocket timing probe ────────────────────────────────────
+function portCheck(host, port) {
+  return new Promise(resolve => {
+    const start = Date.now();
+    let settled = false;
+    const finish = r => {
+      if (settled) return;
+      settled = true;
+      try { ws.close(); } catch(_) {}
+      resolve(r);
+    };
+    const hard = setTimeout(() => finish(false), 4000);
+    let ws;
+    try { ws = new WebSocket(`ws://${host}:${port}`); } catch(_) { clearTimeout(hard); resolve(false); return; }
+    ws.onopen  = () => { clearTimeout(hard); finish(true); };
+    ws.onerror = () => { clearTimeout(hard); finish(Date.now() - start >= 60); };
+  });
+}
+
+// ── Apply state to DOM ────────────────────────────────────────
+function applyState({ aOk, nOk }) {
+  applyService('alerting', aOk, aOk ? 'Fetch → Parse → Publish' : '✕ not responding');
+  applyService('kafka',    aOk, aOk ? 'Inferred — alerting connected' : 'Unknown — alerting offline');
+  applyService('notify',   nOk, nOk ? 'Consume → Persist → Email'    : '✕ not responding');
+  applyService('mysql',    nOk, nOk ? 'Inferred — notify connected'   : 'Unknown — notify offline');
+}
+
+function applyService(name, ok, label) {
+  const state = ok ? 'online' : 'offline';
+  const nodeMap = { alerting: 'node-alerting', kafka: 'node-kafka', notify: 'node-notify', mysql: 'node-mysql' };
+  const pillText = { alerting: ok?'ONLINE':'OFFLINE', kafka: ok?'RUNNING':'UNKNOWN', notify: ok?'ONLINE':'OFFLINE', mysql: ok?'RUNNING':'UNKNOWN' };
+
+  // dots (status bar + card)
+  ['dot-'+name, 'dot2-'+name].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.className = 'svc-dot ' + state;
+  });
+  // pill
+  const pill = document.getElementById('pill-'+name);
+  if (pill) { pill.className = 'status-pill pill-'+state; pill.textContent = pillText[name]; }
+  // node card border
+  const node = document.getElementById(nodeMap[name]);
+  if (node) { node.className = node.className.replace(/node-\w+/g, '') + ' node-'+state; }
+  // label inside card
+  const lbl = document.getElementById('label-'+name);
+  if (lbl) { lbl.textContent = label; lbl.className = 'text-[9px] font-mono ' + (ok ? 'text-green-400' : 'text-red-400'); }
+}
+
+// ── Main check ───────────────────────────────────────────────
+async function checkAll() {
+  const icon = document.getElementById('refresh-icon');
+  icon.classList.add('spin');
+
+  const [aProbe, nProbe] = await Promise.all([
+    portCheck('localhost', 8080),
+    portCheck('localhost', 8081)
+  ]);
+
+  icon.classList.remove('spin');
+
+  // Load current saved state (default to true so first-run doesn't flash red)
+  const saved = JSON.parse(localStorage.getItem('orbital_status') || '{"aOk":null,"nOk":null}');
+
+  // Alerting: increment or reset failure counter
+  if (aProbe) {
+    failures.alerting = 0;
+  } else {
+    failures.alerting++;
+  }
+
+  // Notify: increment or reset failure counter
+  if (nProbe) {
+    failures.notify = 0;
+  } else {
+    failures.notify++;
+  }
+
+  // Only update state when probe succeeds OR failure threshold is reached
+  const aOk = aProbe ? true  : (failures.alerting >= OFFLINE_THRESHOLD ? false : (saved.aOk ?? true));
+  const nOk = nProbe ? true  : (failures.notify   >= OFFLINE_THRESHOLD ? false : (saved.nOk ?? true));
+
+  localStorage.setItem('orbital_status', JSON.stringify({ aOk, nOk }));
+  applyState({ aOk, nOk });
+}
+
+restoreState();
+checkAll();
+setInterval(checkAll, 30000);
+</script>
+</body>
+</html>
